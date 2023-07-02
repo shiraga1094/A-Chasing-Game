@@ -540,8 +540,8 @@ void WriteIn(){
         tmp.clear();
         if(ObjectAmount==-1){
             char ch;
-            for(int x=1; x<22; x++){
-                for(int y=1; y<22; y++){
+            for(int y=1; y<22; y++){
+                for(int x=1; x<22; x++){
                     ifs >> ch;
                     if(ch=='1') Obstacle_Map[No][x][y]=1;
                 }
