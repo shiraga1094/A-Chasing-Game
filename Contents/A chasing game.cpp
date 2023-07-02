@@ -745,7 +745,7 @@ int main(){
 
             World_Map[Ch.X()][Ch.Y()]='C';
         }
-        if(data.score>=5){
+        if(gamemode.Stage() and data.score>=5){
 
             DrawWindowFrame(0,0,43,22,0);
             data.Output();
