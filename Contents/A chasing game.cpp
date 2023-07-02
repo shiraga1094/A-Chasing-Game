@@ -10,11 +10,13 @@ using namespace std;
 #define ESC 7
 
 char World_Map[22][22]; // Size=21*21
+bool Obstacle_Map[10][22][22]={};
 bool Check_Map[22][22]={};
 int Item_Map[22][22]={};
 bool Bomb_Map[22][22]={};
+int MapNo=0;
 bool OutofRange(int x, int y){
-    return x>=22 or x<=0 or y>=22 or y<=0;
+    return x>=22 or x<=0 or y>=22 or y<=0 or Obstacle_Map[MapNo][x][y];
 }
 void gotoxy(int x, int y)
 { // Allows to move inside the terminal using coordinates
@@ -48,6 +50,7 @@ void DrawWorldMap(int x, int y, int tx, int ty){
         case 'O': SetColor(13); break;
         case 'S': SetColor(14); break;
         case 'P': SetColor(2);  break;
+        case 'W': SetColor(136); break;
     }
     gotoxy(tx,ty);
     cout << ch;
@@ -119,7 +122,8 @@ void DrawGameMode(){
     gotoxy(x+4,y+2); cout << "Medium";
     gotoxy(x+4, y+3); cout << "Hard";
     gotoxy(x+4, y+4); cout << "Stage Mode";
-    gotoxy(x-3,y+5); cout << "(Press space to start.)";
+    gotoxy(x+4, y+5); cout << "Map Select: " << MapNo;
+    gotoxy(x-3,y+6); cout << "(Press space to start.)";
 }
 void DrawGameModeMove(int last, int now){
     int x=19, y=11;
@@ -128,6 +132,8 @@ void DrawGameModeMove(int last, int now){
     SetColor(11);
     cout << 'O';
     SetColor();
+    gotoxy(32,15); cout << "   ";
+    gotoxy(32,15); cout << MapNo;
 }
 class Game_Mode{
     private:
@@ -164,15 +170,19 @@ class Game_Mode{
                     gotoxy(0,0); cout << "Test on";
                 }
                 if(key==' '){
-                    mode=Mode;
-                    break;
+                    if(Mode!=4){
+                        mode=Mode;
+                        break;
+                    }else{
+                        MapNo=(MapNo+1)%10;
+                    }
                 }
                 if(key==DOWN){
                     newMode=Mode+1;
-                    newMode=newMode%4;
+                    newMode=newMode%5;
                 }else if(key==UP){
                     newMode=Mode-1;
-                    if(newMode<0) newMode=3;
+                    if(newMode<0) newMode=4;
                 }
                 DrawGameModeMove(Mode,newMode);
                 Mode=newMode;
@@ -528,6 +538,16 @@ void WriteIn(){
     while(ifs >> No >> ObjectAmount){
         Object Ob;
         tmp.clear();
+        if(ObjectAmount==-1){
+            char ch;
+            for(int x=1; x<22; x++){
+                for(int y=1; y<22; y++){
+                    ifs >> ch;
+                    if(ch=='1') Obstacle_Map[No][x][y]=1;
+                }
+            }
+            continue;
+        }
         while(ObjectAmount--){
             ifs >> Ob.X >> Ob.Y >> Ob.Type;
             if(Ob.Type=='E') ifs >> Ob.EType;
@@ -548,6 +568,7 @@ void Reset_Map(){
     for(int r=1; r<=21; r++){
         for(int c=1; c<=21; c++){
             World_Map[r][c]='.';
+            if(Obstacle_Map[MapNo][r][c]) World_Map[r][c]='W';
             Item_Map[r][c]=-1;
             Bomb_Map[r][c]=0;
         }
