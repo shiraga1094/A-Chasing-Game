@@ -1,0 +1,17 @@
+5
+Bomb
+Bullet
+Invincible
+Teleport
+Foresight
+6
+Divine_Punishment
+Future_Vision
+Fiction
+Distinction
+False_Truth
+Invisable
+1
+Test
+1
+Test

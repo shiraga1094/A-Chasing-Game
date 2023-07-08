@@ -10,11 +10,13 @@ using namespace std;
 #define ESC 7
 
 char World_Map[22][22]; // Size=21*21
-bool Obstacle_Map[10][22][22]={};
+int Obstacle_Map[10][22][22]={};
 bool Check_Map[22][22]={};
 int Item_Map[22][22]={};
 bool Bomb_Map[22][22]={};
 int MapNo=0;
+deque<string> Ability_Name[4];
+
 bool OutofRange(int x, int y){
     return x>=22 or x<=0 or y>=22 or y<=0 or Obstacle_Map[MapNo][x][y];
 }
@@ -46,7 +48,7 @@ void DrawWorldMap(int x, int y, int tx, int ty){
     switch(ch){
         case 'C': SetColor(11); break;
         case 'E': SetColor(12); break;
-        case 'B': SetColor(10); break;
+        case 'I': SetColor(10); break;
         case 'O': SetColor(13); break;
         case 'S': SetColor(14); break;
         case 'P': SetColor(2);  break;
@@ -94,6 +96,7 @@ else printf("BOMB:");
 
 gotoxy(12,1); printf("ENEMY:");
 gotoxy(21,1); printf("SCORE:");
+gotoxy(31,1); printf("LIFE:");
 }
 
 void WelcomeMessage(){
@@ -108,7 +111,7 @@ void TipsMessage(){
     gotoxy(x,y); cout << "How to play:";
     gotoxy(x-3,y+1); cout << "Use WASD to move.";
     gotoxy(x-5, y+2); cout << "Press space to set bomb.";
-    gotoxy(x-20, y+3); cout << "'C'=You, 'B'=Bomb, 'E'=Enemy, 'S'=Score, 'O'=Set Bomb";
+    gotoxy(x-20, y+3); cout << "'C'=You, 'I'=Bomb, 'E'=Enemy, 'S'=Score, 'O'=Set Bomb";
     gotoxy(x-22, y+4); cout << "Game ends when enemies catch you or you touch the set bomb.";
     gotoxy(x+1, y+5); cout << "Have fun.";
     gotoxy(x-6, y+6); cout <<"(Press any key to start.)";
@@ -135,6 +138,24 @@ void DrawGameModeMove(int last, int now){
     gotoxy(32,15); cout << "   ";
     gotoxy(32,15); cout << MapNo;
 }
+void DrawAbilityMode(){
+    int x=15, y=10;
+    gotoxy(x,y); cout << "Choose Your Ability:";
+    gotoxy(x+3,y+1); cout << "Level: ";
+    gotoxy(x+3,y+2); cout << "Name: ";
+}
+void DrawAbilityModeMove(int now, int newlevel, int name){
+    int colorno[4]={10,12,3,4};
+    int x=16, y=11;
+    DrawWhiteSpace(23,12,60,13);
+    gotoxy(x,y+(now^1)); cout << ' ';
+    gotoxy(x,y+now);
+    SetColor(11); cout << 'O';
+    gotoxy(24,11); SetColor(colorno[newlevel]); cout << newlevel+1;
+    gotoxy(23,12); cout << Ability_Name[newlevel][name];
+    SetColor();
+
+}
 class Game_Mode{
     private:
         int mode;
@@ -145,8 +166,10 @@ class Game_Mode{
         int restrandom[4]={50,15,18,INT_MAX};
         bool ai;
         bool stage;
+        int ability_mode=0;
     public:
         GameMode(int _mode){mode=_mode; ai=0; stage=0;}
+        int AB(){return ability_mode;}
 
         int ER(){return enemyrandom[mode];}
         int BR(){return bombrandom[mode];}
@@ -190,6 +213,37 @@ class Game_Mode{
             }
             stage=(mode==3);
             DrawWhiteSpace(0,0,80,25);
+            if(mode!=3)
+                SetAbilityMode();
+        }
+        void SetAbilityMode(){
+            DrawAbilityMode();
+            char key; int level=0, Mode=0, name=0;
+            DrawAbilityModeMove(Mode, level, name);
+            while(key=getch()){
+                if(key==' '){
+                    ability_mode=(level+1)*10+name+1;
+                    break;
+                }
+                if(key==DOWN or key==UP) Mode^=1;
+                if(!Mode){
+                    if(key==RIGHT){
+                        level++; level%=4;
+                        name=0;
+                    }else if(key==LEFT){
+                        level--; if(level<0) level=3;
+                        name=0;
+                    }
+                }else if(Mode){
+                    if(key==RIGHT){
+                        name++; name%=Ability_Name[level].size();
+                    }else if(key==LEFT){
+                        name--; if(name<0) name=Ability_Name[level].size()-1;
+                    }
+                }
+                DrawAbilityModeMove(Mode, level, name);
+            }
+            DrawWhiteSpace(0,0,80,25);
         }
 
 };
@@ -199,10 +253,12 @@ class Game_Data{
         int Bomb_count;
         int Enemy_count;
         int Stage;
+        int life;
 
         void Output(){
             DrawWhiteSpace(18,1,20,2);
             DrawWhiteSpace(27,1,29,2);
+            DrawWhiteSpace(36,1,38,2);
 
             if(Stage>0){
                 gotoxy(8,1);
@@ -213,10 +269,12 @@ class Game_Data{
             }
             gotoxy(18,1); cout << Enemy_count;
             gotoxy(27,1); cout << score;
+            gotoxy(36,1); cout << life;
         }
         void Get_Score(){
             score++;
         }
+        void LifeDecrease(){life--;}
         void Get_Bomb(){
             if(Bomb_count>=2){
                 DrawWhiteSpace(46,3,80,5);
@@ -236,23 +294,27 @@ class Game_Data{
             Output();
         }
 };
-
 class Character{
 private:
     int x;
     int y;
+    int life;
     bool Set_bombs;
     bool imDead;
 public:
     int X(){return x;}
     int Y(){return y;}
+    int Life(){return life;}
 
     Character(int _x, int _y){
         x=_x;
         y=_y;
         Set_bombs=0;
         imDead=0;
+        life=3;
     }
+
+    bool UnDeath=0;
 
     bool Move(char key){
         int nx=x, ny=y;
@@ -300,7 +362,11 @@ public:
         return imDead;
     }
     void toDead(){
-        imDead=1;
+        if(!UnDeath) life--;
+        DrawWhiteSpace(46,3,80,5);
+        gotoxy(46,3); cout << "It hurts.";
+        if(UnDeath) cout << " But Nothing.";
+        if(!life) imDead=1;
     }
     bool toSet(){
         if(Set_bombs){
@@ -325,9 +391,19 @@ private:
     int web[4];
 
 public:
+    int prx, pry;
+    int deathcount;
+    bool fiction=0;
+    int paralyze=0;
     int X(){return x;}
     int Y(){return y;}
-
+    void toDead(){imDead=1;}
+    bool isDead(){
+        if(imDead==1){
+            if(World_Map[x][y]=='E') World_Map[x][y]='.';
+        }
+        return imDead;
+    }
     Enemy(int _x, int _y, int _type){
         x=_x;
         y=_y;
@@ -338,12 +414,19 @@ public:
             web[0]=x-4; web[2]=x+4;
             web[1]=y-4; web[3]=y+4;
         }
+        deathcount=-1;
+        prx=x; pry=y;
     }
     bool InWeb(int tx, int ty){
         return tx>=web[0] and tx<=web[2] and ty>=web[1] and ty<=web[3];
     }
 
     bool Move(int tx, int ty, bool toRest){
+        if(paralyze) return 0;
+        if(fiction){
+            Obstacle_Map[MapNo][prx][pry]=0;
+        }
+        prx=x; pry=y;
         int nx=x, ny=y,D;
         int nowtype=type;
         if((type==2 or type==3) and (abs(tx-nx)<=3 and abs(ty-ny)<=3)) nowtype=1;
@@ -429,6 +512,7 @@ public:
                     if(OutofRange(nx,ny) or Check_Map[nx][ny]or World_Map[nx][ny]=='S' or Item_Map[nx][ny]!=-1){
                         continue;
                     }
+                    if(fiction and World_Map[nx][ny]=='C') continue;
                     if(type==4 and !InWeb(nx,ny)) continue;
                     World_Map[x][y]='.';
                     x=nx;
@@ -440,7 +524,6 @@ public:
                     World_Map[nx][ny]='E';
                     //if(type==4) World_Map[nx][ny]='W';
                     //if(rest) World_Map[nx][ny]='R';
-
                     Check_Map[nx][ny]=1;
                     break;
 
@@ -455,9 +538,10 @@ class Reward{
     private:
         int X;
         int Y;
+        deque<pair<int,int>> reward;
     public:
-        int PosX(){return X;}
-        int PosY(){return Y;}
+        int PosX(){return reward[0].first;}
+        int PosY(){return reward[0].second;}
         void Set_Reward(){
             int T=0;
             while(T<1e5){
@@ -465,47 +549,66 @@ class Reward{
                 int y=rand()%21+1;
                 if(World_Map[x][y]!='.') continue;
                 World_Map[x][y]='S';
-                X=x; Y=y;
+                reward.push_back({x,y});
                 break;
             }
 
         }
 
-        void Get_Reward(){
+        void Get_Reward(int tx, int ty){
+            int P;
+            for(; P<reward.size(); P++){
+                if(reward[P].first==tx and reward[P].second==ty) break;
+            }
+            if(P>=reward.size()) return;
+            reward.erase(reward.begin()+P);
             Set_Reward();
         }
 
 };
-class Bomb{
+class Item{
     private:
         int x;
         int y;
-        int num;
         bool paralyze;
+        deque<pair<int,int>> itemlist;
     public:
         int X(){return x;}
         int Y(){return y;}
         void StageMode(){paralyze=1;}
+        int Checkitemsize(){return itemlist.size();}
 
-        Bomb(int _x, int _y){
-            x=_x;
-            y=_y;
-        }
-        void Map_Bomb(){
+        void Set_Item(){
             int T=0;
             while(T<1e5){
                 int nx=rand()%21+1;
                 int ny=rand()%21+1;
                 if(World_Map[nx][ny]!='.') continue;
-                World_Map[nx][ny]='B';
+                World_Map[nx][ny]='I';
                 if(paralyze) World_Map[nx][ny]='P';
-                Item_Map[nx][ny]=num;
-                x=nx; y=ny;
+                Item_Map[nx][ny]=1;
+                itemlist.push_back({nx,ny});
                 break;
             }
+
         }
-        void Get_Bomb(){
-            Item_Map[x][y]=-1;
+
+        void Get_Item(int tx, int ty){
+            int P;
+            for(; P<itemlist.size(); P++){
+                if(itemlist[P].first==tx and itemlist[P].second==ty) break;
+            }
+            if(P>=itemlist.size()) return;
+            itemlist.erase(itemlist.begin()+P);
+            Item_Map[tx][ty]=-1;
+        }
+        void Erase_Item(){
+            for(int P=0; P<itemlist.size(); P++){
+                int nx=itemlist[P].first, ny=itemlist[P].second;
+                Item_Map[nx][ny]=-1;
+                if(World_Map[nx][ny]=='I') World_Map[nx][ny]='.';
+            }
+            itemlist.clear();
         }
 
 };
@@ -518,20 +621,287 @@ struct Object{
 Game_Mode gamemode;
 Game_Data data;
 deque<Enemy> E;
-deque<Bomb> B;
+Item Itemlist;
 deque<pair<int,int>> Q;
 Reward SS;
 Character Ch= Character(11,11);
 vector<vector<Object>> StageModeData;
 int NowStage=0;
 
+class Ability{
+    // No item
+    private:
+        int abilitymode;
+        int skill=2;
+        int Effect_21=-1;
+        int Effect_22=-1;
+        int Effect_24=-1;
+        int NowLife_24=0;
+        int Web_24[2];
+        int Effect_25=-1;
+        int Effect_26=0;
+        bool getitem=0;
+    public:
+
+        int ABM(){return abilitymode;}
+        bool hadDone=0;
+        void GetData(){abilitymode=gamemode.AB();}
+
+        void GetItem(){skill++; if(skill>5) skill=5; getitem=1;}
+        void DrawSkillLimit(){
+            if(abilitymode==11) return;
+            DrawWhiteSpace(0,1,12,2);
+            gotoxy(0,1); cout << "Skill:";
+            SetColor(119);
+            for(int i=0; i<skill; i++){
+                gotoxy(6+i,1); cout << ' ';
+            }
+            SetColor();
+        }
+        void DrawWorldMap(int x, int y, int color, char ch){
+            x--; y--;
+            //char ch=World_Map[x+1][y+1];
+            gotoxy(1+x*2, 4+y);
+            SetColor(color);
+            cout << ch;
+            SetColor();
+        }
+        void DrawEffect(){
+            DrawSkillLimit();
+            switch(abilitymode){
+                case 21:
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].deathcount!=-1){
+                            DrawWorldMap(E[i].prx, E[i].pry, 13, 'E');
+                        }
+                        if(E[i].deathcount==1) DrawWorldMap(E[i].prx, E[i].pry, 173, 'E');
+                    }
+                    break;
+                case 22:
+                    if(Effect_22!=-1){
+                        for(int i=0; i<E.size(); i++){
+                            if(World_Map[E[i].prx][E[i].pry]=='.')
+                                DrawWorldMap(E[i].prx, E[i].pry, 7, '.');
+                            if(World_Map[Ch.X()][Ch.Y()]=='E')
+                                DrawWorldMap(Ch.X(), Ch.Y(), 75, 'C');
+                            else if(World_Map[E[i].X()][E[i].Y()]=='E')
+                                DrawWorldMap(E[i].X(), E[i].Y(), 13, 'E');
+                        }
+                    }
+                    break;
+                case 23:
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].fiction and E[i].deathcount!=0){
+                            DrawWorldMap(E[i].prx, E[i].pry, 9, 'E');
+                        }
+                    }
+                    break;
+                case 24:
+                    for(int i=1; i<=21; i++){
+                        for(int s=1; s<=21; s++){
+                            if(Obstacle_Map[MapNo][i][s]>=2)
+                                DrawWorldMap(i,s,119,' ');
+                        }
+                    }
+                    break;
+                case 25:
+                    if(Effect_25!=-1)
+                        DrawWorldMap(Ch.X(), Ch.Y(), 3, 'C');
+                    break;
+                case 26:
+                    if(Effect_26){
+                        for(int i=0; i<E.size(); i++){
+                            DrawWorldMap(E[i].prx, E[i].pry, 7, '.');
+                        }
+                    }
+                    break;
+            }
+        }
+        void Effecton(){
+            DrawWhiteSpace(46,3,80,5);
+            gotoxy(46,3); cout << "Ability on.";
+        }
+        void Effectoff(){
+            DrawWhiteSpace(46,3,80,5);
+            gotoxy(46,3); cout << "Ability off.";
+        }
+        void Active(){
+            switch(abilitymode){
+                case 21://¤Ñ»@
+                    if(Effect_21!=-1) return;
+                    if(hadDone) return;
+                    if(skill<3) return; skill-=3;
+                    Effecton(); hadDone=1;
+                    Effect_21=20;
+                    Itemlist.Erase_Item();
+                    for(int i=0; i<E.size(); i++){
+                        E[i].deathcount=20;
+                    }
+                    break;
+                case 23:
+                    if(skill<3) return; skill-=3;
+                    Effecton(); hadDone=1;
+                    for(int i=0; i<5; i++){
+                        int T=0;
+                        while(T<1e5){
+                            int x=rand()%21+1;
+                            int y=rand()%21+1;
+                            if(World_Map[x][y]!='.') continue;
+                            World_Map[x][y]='E';
+                            E.push_back(Enemy(x,y,4));
+                            E.back().deathcount=10;
+                            E.back().fiction=1;
+                            break;
+                        }
+                    }
+                    break;
+                case 24:
+                    if(Effect_24!=-1) return;
+                    if(hadDone) return;
+                    if(skill<5) return; skill=0;
+                    hadDone=1; Effecton(); Effect_24=10;
+                    Web_24[0]=Ch.X(); Web_24[1]=Ch.Y();
+                    for(int i=Ch.X()-4; i<=Ch.X()+4; i++){
+                        for(int s=Ch.Y()-4; s<=Ch.Y()+4; s++){
+                            if(i>=1 and i<=21 and s>=1 and s<=21)
+                                Obstacle_Map[MapNo][i][s]+=2;
+                        }
+                    }
+                    for(int i=Ch.X()-3; i<=Ch.X()+3; i++){
+                        for(int s=Ch.Y()-3; s<=Ch.Y()+3; s++){
+                            if(i>=1 and i<=21 and s>=1 and s<=21)
+                                Obstacle_Map[MapNo][i][s]-=2;
+                        }
+                    }
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].X()>=Ch.X()-3 and E[i].X()<=Ch.X()+3 and E[i].Y()>=Ch.Y()-3 and E[i].Y()<=Ch.Y()+3)
+                            continue;
+                        E[i].paralyze=10;
+                    }
+                    NowLife_24=Ch.Life();
+                    break;
+                case 25:
+                    if(Effect_25==-1 and hadDone) return;
+                    if(Effect_25==-1){
+                        Effecton(); hadDone=1;
+                        Ch.UnDeath=1; Effect_25=20;
+                    }else if(Effect_25!=-1 and skill==5){
+                        Effectoff();
+                        skill=0;
+                        Ch.UnDeath=0;
+                        Effect_25=-1;
+                    }
+                    hadDone=1;
+                    break;
+            }
+        }
+
+        void Passive(){
+            hadDone=0;
+            DrawEffect();
+            switch(abilitymode){
+                case 21:
+                    if(Effect_21!=-1) DrawWorldMap(Ch.X(), Ch.Y(), 43, 'C');
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].deathcount!=-1){
+                            E[i].deathcount--;
+                            if(!E[i].deathcount){
+                                E[i].toDead();
+                                data.Get_Score();
+                            }
+                        }
+                    }
+                    if(Effect_21==-1) break;
+                    if(getitem){Effect_21=-1; break;}
+                    Effect_21--;
+                    if(Effect_21==0){
+                        Ch.toDead();
+                        data.LifeDecrease();
+                        Effect_21=-1;
+                    }
+                    break;
+                case 22:
+                    if(skill==5){skill=0; Effect_22=1; Itemlist.Erase_Item();}
+                    if(Effect_22!=-1){
+                        if(skill==3){skill=0; Effect_22=-1; break;}
+                    }
+                    break;
+                case 23:
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].deathcount) E[i].deathcount--;
+                        if(!E[i].deathcount){
+                            E[i].toDead();
+                            if(Obstacle_Map[MapNo][E[i].prx][E[i].pry])
+                                Obstacle_Map[MapNo][E[i].prx][E[i].pry]=0;
+                        }
+                        else if(E[i].fiction){
+                            Check_Map[E[i].prx][E[i].pry]=0;
+                            Check_Map[E[i].X()][E[i].Y()]=0;
+                            Obstacle_Map[MapNo][E[i].prx][E[i].pry]=1;
+                        }
+                    }
+                    break;
+                case 24:
+                    if(Effect_24==-1) break;
+                    Effect_24--;
+                    if(!Effect_24 or NowLife_24!=Ch.Life()){
+                        Effect_24=-1;
+                        for(int i=Web_24[0]-4; i<=Web_24[0]+4; i++){
+                            for(int s=Web_24[1]-4; s<=Web_24[1]+4; s++){
+                                if(i>=1 and i<=21 and s>=1 and s<=21)
+                                    Obstacle_Map[MapNo][i][s]-=2;
+                            }
+                        }
+                        for(int i=Web_24[0]-3; i<=Web_24[0]+3; i++){
+                            for(int s=Web_24[1]-3; s<=Web_24[1]+3; s++){
+                                if(i>=1 and i<=21 and s>=1 and s<=21)
+                                    Obstacle_Map[MapNo][i][s]+=2;
+                            }
+                        }
+                        DrawWindowFrame(0,0,43,22,1);
+                        if(NowLife_24==Ch.Life()){
+                            for(int i=0; i<E.size(); i++){
+                                if(E[i].X()>=Web_24[0]-3 and E[i].X()<=Web_24[0]+3 and E[i].Y()>=Web_24[1]-3 and E[i].Y()<=Web_24[1]+3){
+                                    E[i].toDead();
+                                    DrawWorldMap(E[i].X(), E[i].Y(), 124, 'E');
+                                    data.Get_Score();
+                                }
+                            }
+                        }
+                        for(int i=0; i<E.size(); i++) E[i].paralyze=0;
+
+
+
+                    }
+
+                    break;
+                case 25:
+                    if(Effect_25==-1) break;
+                    Effect_25--;
+                    if(!Effect_25){
+                        Ch.UnDeath=0;
+                        Effect_25=-1;
+                        Ch.toDead();
+                    }
+                    break;
+                case 26:
+                    Effect_26++; Effect_26%=5;
+                    if(skill==5){
+                        skill=0;
+                        for(int i=0; i<2; i++) data.Get_Score();
+                    }
+                    break;
+            }
+
+            getitem=0;
+        }
+
+};
+
+Ability GameAbility;
+
 void WriteIn(){
     std::ifstream ifs("StageModeData.txt", std::ios::in);
-    if(!ifs.is_open()){
-        gotoxy(0,0);
-        cout << "Failed to open";
-        return;
-    }
     vector<Object> tmp;
     for(int i=0; i<=100; i++) StageModeData.push_back(tmp);
     int No, ObjectAmount;
@@ -556,6 +926,15 @@ void WriteIn(){
         StageModeData[No]=tmp;
     }
     ifs.close();
+    std::ifstream ifs2("AbilityName.txt", std::ios::in);
+    int T; string SS;
+    for(int i=0; ifs2>>T; i++){
+        while(T--){
+            ifs2>>SS;
+            Ability_Name[i].push_back(SS);
+        }
+    }
+    ifs2.close();
     //gotoxy(25,60); cout << "Done";
 }
 void SetPosition(int x, int y, char ch){
@@ -574,7 +953,6 @@ void Reset_Map(){
         }
     }
     E.clear();
-    B.clear();
 
     for(int i=0; i<StageModeData[NowStage].size(); i++){
         int x=StageModeData[NowStage][i].X;
@@ -589,9 +967,10 @@ void Reset_Map(){
         }
     }
 
-    SS.Set_Reward();
+    for(int i=0; i<2; i++) SS.Set_Reward();
     data.score=0;
     data.Enemy_count=E.size();
+    data.life=3;
     DrawGameLimits(gamemode.Stage());
     if(!gamemode.Stage()) data.Bomb_count=1;
 
@@ -616,11 +995,13 @@ void Rand_Position(int tx, int ty){
         World_Map[x][y]='E';
         int tmp=(E.size()>=2)? rand()%10: rand()%3;
         E.push_back(Enemy(x,y,ETypeRand[tmp]));
+        DrawWhiteSpace(46,3,80,5);
         gotoxy(46,3);
         cout << "New enemy appeared.";
         break;
     }
 }
+
 void Set_Bomb(int x, int y){
     World_Map[x][y]='O';
     Bomb_Map[x][y]=1;
@@ -637,48 +1018,49 @@ int main(){
     //Start
     srand(time(NULL));
     HideCursor();
+    WriteIn();
     WelcomeMessage();
     TipsMessage();
     gamemode.SetGameMode();
-    WriteIn();
+    GameAbility.GetData();
     Reset_Map();
 
     int explode=0;
     int AIturn=0, a=50, b=5;
     int Paralyze=0;
+    bool suicide=0;
 
     while(!Ch.isDead()){
+
         //random part
         if(!gamemode.Stage()){
             int R=rand()%gamemode.ER();
             if(!R) Rand_Position(Ch.X(), Ch.Y());
             if(E.size()<gamemode.EL()) Rand_Position(Ch.X(), Ch.Y());
             R=rand()%gamemode.BR();
-            if(!R and B.size()<2){
-                B.push_back(Bomb(0,0));
-                B.back().Map_Bomb();
-            }else if(B.size()<gamemode.BL()){
-                B.push_back(Bomb(0,0));
-                B.back().Map_Bomb();
+            if(!R and Itemlist.Checkitemsize()<2){
+                Itemlist.Set_Item();
+            }else if(Itemlist.Checkitemsize()<gamemode.BL()){
+                Itemlist.Set_Item();
             }
         }else{
             int R=rand()%gamemode.BR();
-            if(B.size()<gamemode.BL() and !R){
-                B.push_back(Bomb(0,0));
-                B.back().StageMode();
-                B.back().Map_Bomb();
+
+            if(Itemlist.Checkitemsize()<gamemode.BL() and !R){
+                Itemlist.StageMode();
+                Itemlist.Set_Item();
             }
         }
 
-
-
         data.Enemy_count=E.size();
+        data.life=Ch.Life();
         data.Output();
 
         //Initial
         for(int i=0; i<22; i++){
-            for(int s=0 ;s<22; s++)
+            for(int s=0 ;s<22; s++){
                 Check_Map[i][s]=0;
+            }
         }
 
         for(int i=0; i<E.size(); i++){
@@ -697,21 +1079,43 @@ int main(){
             }
         }else{
             Paralyze--;
+            for(int i=0; i<E.size(); i++){
+                World_Map[E[i].X()][E[i].Y()]='E';
+                E[i].prx=E[i].X(); E[i].pry=E[i].Y();
+            }
         }
+
+        /*
+        for(int i=0; i<21; i++){
+            for(int s=0; s<21; s++){
+                if(Check_Map[i+1][s+1]){
+                    gotoxy(1+i*2, 4+s);
+                    if(World_Map[i+1][s+1]=='E') cout << 'R';
+                }
+            }
+        }
+        */
+        GameAbility.Passive();
 
         //Character's move
         char key;
         while(!gamemode.AI()){
             key=getch();
             if(key==' ' and !gamemode.Stage()){
-                if(data.Bomb_count<=0){
-                    DrawWhiteSpace(46,3,80,5);
-                    gotoxy(46,3);
-                    cout << "No bomb.";
-                }else if(Ch.toSet()){
-                    Set_Bomb(Ch.X(), Ch.Y());
-                    data.Use_Bomb();
+                //Bomb
+                if(GameAbility.ABM()==11){
+                    if(data.Bomb_count<=0){
+                        DrawWhiteSpace(46,3,80,5);
+                        gotoxy(46,3);
+                        cout << "No bomb.";
+                    }else if(Ch.toSet()){
+                        Set_Bomb(Ch.X(), Ch.Y());
+                        data.Use_Bomb();
+                    }
+                    continue;
                 }
+
+                GameAbility.Active();
                 continue;
             }
             if(Ch.Move(key)){
@@ -740,26 +1144,26 @@ int main(){
                 AIturn++;
                 continue;
             }else Ch.toDead();
-            World_Map[Ch.X()][Ch.Y()]='X';
+            World_Map[Ch.X()][Ch.Y()]='C';
+            data.LifeDecrease();
+            Paralyze=1;
+            if(Bomb_Map[Ch.X()][Ch.Y()]){
+                Q.push_back({Ch.X(), Ch.Y()});
+                suicide=1;
+            }
         }else{
             if(World_Map[Ch.X()][Ch.Y()]=='S'){
-                SS.Get_Reward();
+                SS.Get_Reward(Ch.X(), Ch.Y());
                 data.Get_Score();
             }
-            if(World_Map[Ch.X()][Ch.Y()]=='B'){
-                int P=0;
-                for(; P<2; P++){
-                    if(B[P].X()==Ch.X() and B[P].Y()==Ch.Y())
-                        break;
-                }
-                B[P].Get_Bomb();
-                data.Get_Bomb();
-                B.erase(B.begin()+P);
+            if(World_Map[Ch.X()][Ch.Y()]=='I'){
+                Itemlist.Get_Item(Ch.X(), Ch.Y());
+                if(GameAbility.ABM()==11) data.Get_Bomb();
+                else GameAbility.GetItem();
             }
             if(World_Map[Ch.X()][Ch.Y()]=='P'){
-                B[0].Get_Bomb();
                 Paralyze=5;
-                B.erase(B.begin());
+                Itemlist.Get_Item(Ch.X(), Ch.Y());
                 gotoxy(46,3);
                 cout << "Enemies got paralyzed.";
             }
@@ -779,20 +1183,25 @@ int main(){
         for(int i=0; i<E.size(); i++){
             if(Bomb_Map[E[i].X()][E[i].Y()]){
                 Q.push_back({E[i].X(),E[i].Y()});
-                E.erase(E.begin()+i);
-                i--;
+                E[i].toDead();
                 explode++;
             }
         }
-        if(explode){
-                data.Explode(explode);
+        if(!Q.empty()){
+                if(explode) data.Explode(explode);
                 for(int i=0; i<explode; i++) data.Get_Score();
                 while(!Q.empty()){
                     Erase_Bomb(Q.front().first, Q.front().second);
                     Q.pop_front();
                 }
         }
+        for(int i=0; i<E.size(); i++){
+            if(E[i].isDead()) E.erase(E.begin()+i);
+        }
         explode=0;
+        if(suicide) World_Map[Ch.X()][Ch.Y()]='C';
+        if(Ch.isDead()) World_Map[Ch.X()][Ch.Y()]='X';
+        suicide=0;
 
         DrawWindowFrame(0,0,43,22,0);
     }
