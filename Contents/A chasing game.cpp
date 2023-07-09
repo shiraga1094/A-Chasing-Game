@@ -305,6 +305,9 @@ public:
     int X(){return x;}
     int Y(){return y;}
     int Life(){return life;}
+    void ResetPos(int nx, int ny){
+        x=nx; y=ny;
+    }
 
     Character(int _x, int _y){
         x=_x;
@@ -315,14 +318,15 @@ public:
     }
 
     bool UnDeath=0;
+    int range=0;
 
     bool Move(char key){
         int nx=x, ny=y;
         switch(key){
-            case UP: ny--; break;
-            case DOWN: ny++; break;
-            case LEFT: nx--; break;
-            case RIGHT: nx++; break;
+            case UP: ny-=(range+1); break;
+            case DOWN: ny+=(range+1); break;
+            case LEFT: nx-=(range+1); break;
+            case RIGHT: nx+=(range+1); break;
         }
         if(!OutofRange(nx,ny) and (nx!=x or ny!=y)){
             if(World_Map[x][y]=='C') World_Map[x][y]='.';
@@ -391,13 +395,20 @@ private:
     int web[4];
 
 public:
+    deque<pair<int,int>> Step;
     int prx, pry;
     int deathcount;
     bool fiction=0;
+    bool UnDeath=0;
     int paralyze=0;
+    int relifecount=-1;
+
     int X(){return x;}
     int Y(){return y;}
-    void toDead(){imDead=1;}
+    void Reset_Pos(int nx, int ny, int px, int py){
+        x=nx; y=ny; prx=px; pry=py;
+    }
+    void toDead(){if(!UnDeath) imDead=1;}
     bool isDead(){
         if(imDead==1){
             if(World_Map[x][y]=='E') World_Map[x][y]='.';
@@ -422,7 +433,12 @@ public:
     }
 
     bool Move(int tx, int ty, bool toRest){
-        if(paralyze) return 0;
+        if(paralyze){
+            paralyze--; return 0;
+        }
+        Step.push_back({prx, pry});
+        if(Step.size()>11) Step.pop_front();
+
         if(fiction){
             Obstacle_Map[MapNo][prx][pry]=0;
         }
@@ -564,6 +580,13 @@ class Reward{
             reward.erase(reward.begin()+P);
             Set_Reward();
         }
+        void Erase_Reward(){
+            for(int P=0; P<reward.size(); P++){
+                int nx=reward[P].first, ny=reward[P].second;
+                if(World_Map[nx][ny]=='S') World_Map[nx][ny]='.';
+            }
+            reward.clear();
+        }
 
 };
 class Item{
@@ -578,17 +601,24 @@ class Item{
         void StageMode(){paralyze=1;}
         int Checkitemsize(){return itemlist.size();}
 
-        void Set_Item(){
-            int T=0;
-            while(T<1e5){
-                int nx=rand()%21+1;
-                int ny=rand()%21+1;
-                if(World_Map[nx][ny]!='.') continue;
-                World_Map[nx][ny]='I';
-                if(paralyze) World_Map[nx][ny]='P';
-                Item_Map[nx][ny]=1;
-                itemlist.push_back({nx,ny});
-                break;
+        void Set_Item(int ax=-1, int ay=-1){
+            if(ax==-1 and ay==-1){
+                int T=0;
+                while(T<1e5){
+                    int nx=rand()%21+1;
+                    int ny=rand()%21+1;
+                    if(World_Map[nx][ny]!='.') continue;
+                    World_Map[nx][ny]='I';
+                    if(paralyze) World_Map[nx][ny]='P';
+                    Item_Map[nx][ny]=1;
+                    itemlist.push_back({nx,ny});
+                    break;
+                }
+            }else{
+                if(World_Map[ax][ay]!='.') return;
+                World_Map[ax][ay]='I';
+                Item_Map[ax][ay]=1;
+                itemlist.push_back({ax,ay});
             }
 
         }
@@ -602,11 +632,12 @@ class Item{
             itemlist.erase(itemlist.begin()+P);
             Item_Map[tx][ty]=-1;
         }
-        void Erase_Item(){
+        void Erase_Item(bool reset=0){
             for(int P=0; P<itemlist.size(); P++){
                 int nx=itemlist[P].first, ny=itemlist[P].second;
                 Item_Map[nx][ny]=-1;
                 if(World_Map[nx][ny]=='I') World_Map[nx][ny]='.';
+                if(reset) DrawWorldMap(nx-1, ny-1, (nx-1)*2+1, ny+3);
             }
             itemlist.clear();
         }
@@ -627,12 +658,17 @@ Reward SS;
 Character Ch= Character(11,11);
 vector<vector<Object>> StageModeData;
 int NowStage=0;
+void Rand_Position(int tx, int ty);
 
 class Ability{
     // No item
     private:
         int abilitymode;
         int skill=2;
+        int Effect_13=-1;
+        int Effect_14= 0;
+        int Effect_15=-1;
+        int Effect_16= 0;
         int Effect_21=-1;
         int Effect_22=-1;
         int Effect_24=-1;
@@ -640,7 +676,12 @@ class Ability{
         int Web_24[2];
         int Effect_25=-1;
         int Effect_26=0;
+        int Effect_31=-1;
+        int grid_33[22][22];
+        int Effect_34=-1;
+        int grid_35[22][22];
         bool getitem=0;
+        bool getreward=0;
     public:
 
         int ABM(){return abilitymode;}
@@ -648,6 +689,7 @@ class Ability{
         void GetData(){abilitymode=gamemode.AB();}
 
         void GetItem(){skill++; if(skill>5) skill=5; getitem=1;}
+        void GetReward(){getreward=1;}
         void DrawSkillLimit(){
             if(abilitymode==11) return;
             DrawWhiteSpace(0,1,12,2);
@@ -669,6 +711,25 @@ class Ability{
         void DrawEffect(){
             DrawSkillLimit();
             switch(abilitymode){
+                case 13:
+                    if(Effect_13!=-1){
+                        DrawWorldMap(Ch.X(), Ch.Y(), 3, 'C');
+                    }
+                    break;
+                case 15:
+                    if(Effect_15!=-1){
+                        for(int i=0; i<E.size(); i++){
+                            DrawWorldMap(E[i].X(), E[i].Y(), 13, 'E');
+                            if(E[i].X()==Ch.X() and E[i].Y()==Ch.Y())
+                                DrawWorldMap(Ch.X(), Ch.Y(), 75, 'C');
+                        }
+                    }
+                    break;
+                case 16:
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].paralyze) DrawWorldMap(E[i].X(), E[i].Y(), 13, 'E');
+                    }
+                    break;
                 case 21:
                     for(int i=0; i<E.size(); i++){
                         if(E[i].deathcount!=-1){
@@ -700,7 +761,7 @@ class Ability{
                     for(int i=1; i<=21; i++){
                         for(int s=1; s<=21; s++){
                             if(Obstacle_Map[MapNo][i][s]>=2)
-                                DrawWorldMap(i,s,119,' ');
+                                DrawWorldMap(i,s,255,' ');
                         }
                     }
                     break;
@@ -715,6 +776,40 @@ class Ability{
                         }
                     }
                     break;
+                case 31:
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].UnDeath) DrawWorldMap(E[i].prx, E[i].pry, 5, 'E');
+                    }
+                    if(Effect_31!=-1){
+                        for(int i=0; i<E.size(); i++){
+                            if(!E[i].UnDeath)
+                                DrawWorldMap(E[i].prx, E[i].pry, 252, 'E');
+                        }
+                    }
+                    break;
+                case 33:
+                    for(int i=0; i<E.size(); i++){
+                        DrawWorldMap(E[i].prx, E[i].pry, 7, '.');
+                    }
+                    for(int i=1; i<=21; i++){
+                        for(int s=1; s<=21; s++){
+                            if(grid_33[i][s]){
+                                if(World_Map[i][s]=='C')
+                                    DrawWorldMap(i,s,123,'C');
+                                else if(World_Map[i][s]=='S')
+                                    DrawWorldMap(i,s,126,'S');
+                                else
+                                    DrawWorldMap(i,s,119,' ');
+                            }
+                        }
+                    }
+                    break;
+                case 34:
+                    if(Effect_34!=-1){
+                        for(int i=0; i<E.size(); i++)
+                            DrawWorldMap(E[i].prx, E[i].pry, 15, 'E');
+                    }
+                    break;
             }
         }
         void Effecton(){
@@ -727,7 +822,49 @@ class Ability{
         }
         void Active(){
             switch(abilitymode){
-                case 21://¤Ñ»@
+                case 13:
+                    if(Effect_13!=-1) return;
+                    if(hadDone) return;
+                    if(skill<4) return; skill-=4;
+                    Effecton(); hadDone=1;
+                    Effect_13=1;
+                    Ch.UnDeath=1;
+                    break;
+                case 14:
+                    if(skill<1) return; skill--;
+                    Ch.range++; Effect_14++;
+                    Effecton(); cout << " level:" << Effect_14;
+                    DrawEffect();
+                    break;
+                case 15:
+                    if(Effect_15!=-1) return;
+                    if(hadDone) return;
+                    if(skill<2) return; skill-=2;
+                    Effecton();
+                    Effect_15=1; hadDone=1;
+                    DrawEffect();
+                    Effect_15=-1;
+                    break;
+                case 16:
+                    if(skill<2) return;
+                    if(hadDone){
+                        if(skill==3){Effect_16=1; skill=0;}
+                        else return;
+                    }else
+                        skill-=2;
+                    hadDone=1; Effecton();
+                    if(Effect_16) cout << " Level Max.";
+                    for(int i=0; i<E.size(); i++){
+                        int nx=E[i].X(), ny=E[i].Y();
+                        int px=E[i].prx, py=E[i].pry;
+                        if(px>=Ch.X()-2 and px<=Ch.X()+2 and py>=Ch.Y()-2 and py<=Ch.Y()+2){
+                            E[i].paralyze=5;
+                        }
+                        if(Effect_16) E[i].paralyze=5;
+                    }
+                    Effect_16=0;
+                    break;
+                case 21:
                     if(Effect_21!=-1) return;
                     if(hadDone) return;
                     if(skill<3) return; skill-=3;
@@ -741,7 +878,7 @@ class Ability{
                 case 23:
                     if(skill<3) return; skill-=3;
                     Effecton(); hadDone=1;
-                    for(int i=0; i<5; i++){
+                    for(int i=0; i<10; i++){
                         int T=0;
                         while(T<1e5){
                             int x=rand()%21+1;
@@ -749,7 +886,7 @@ class Ability{
                             if(World_Map[x][y]!='.') continue;
                             World_Map[x][y]='E';
                             E.push_back(Enemy(x,y,4));
-                            E.back().deathcount=10;
+                            E.back().deathcount=20;
                             E.back().fiction=1;
                             break;
                         }
@@ -758,23 +895,23 @@ class Ability{
                 case 24:
                     if(Effect_24!=-1) return;
                     if(hadDone) return;
-                    if(skill<5) return; skill=0;
+                    if(skill<3) return; skill-=3;
                     hadDone=1; Effecton(); Effect_24=10;
                     Web_24[0]=Ch.X(); Web_24[1]=Ch.Y();
-                    for(int i=Ch.X()-4; i<=Ch.X()+4; i++){
-                        for(int s=Ch.Y()-4; s<=Ch.Y()+4; s++){
+                    for(int i=Ch.X()-5; i<=Ch.X()+5; i++){
+                        for(int s=Ch.Y()-5; s<=Ch.Y()+5; s++){
                             if(i>=1 and i<=21 and s>=1 and s<=21)
                                 Obstacle_Map[MapNo][i][s]+=2;
                         }
                     }
-                    for(int i=Ch.X()-3; i<=Ch.X()+3; i++){
-                        for(int s=Ch.Y()-3; s<=Ch.Y()+3; s++){
+                    for(int i=Ch.X()-4; i<=Ch.X()+4; i++){
+                        for(int s=Ch.Y()-4; s<=Ch.Y()+4; s++){
                             if(i>=1 and i<=21 and s>=1 and s<=21)
                                 Obstacle_Map[MapNo][i][s]-=2;
                         }
                     }
                     for(int i=0; i<E.size(); i++){
-                        if(E[i].X()>=Ch.X()-3 and E[i].X()<=Ch.X()+3 and E[i].Y()>=Ch.Y()-3 and E[i].Y()<=Ch.Y()+3)
+                        if(E[i].X()>=Ch.X()-4 and E[i].X()<=Ch.X()+4 and E[i].Y()>=Ch.Y()-4 and E[i].Y()<=Ch.Y()+4)
                             continue;
                         E[i].paralyze=10;
                     }
@@ -784,7 +921,7 @@ class Ability{
                     if(Effect_25==-1 and hadDone) return;
                     if(Effect_25==-1){
                         Effecton(); hadDone=1;
-                        Ch.UnDeath=1; Effect_25=20;
+                        Ch.UnDeath=1; Effect_25=30;
                     }else if(Effect_25!=-1 and skill==5){
                         Effectoff();
                         skill=0;
@@ -793,6 +930,27 @@ class Ability{
                     }
                     hadDone=1;
                     break;
+                case 31:
+                    if(hadDone) return;
+                    if(skill<=0) return; skill--;
+                    hadDone=1; Effect_31=1;
+                    DrawEffect();
+                    for(int i=0; i<E.size(); i++){
+                        E[i].toDead();
+                        if(!E[i].UnDeath) data.Get_Score();
+                    }
+                    Effect_31=-1;
+                    Rand_Position(Ch.X(), Ch.Y());
+                    E.back().UnDeath=1;
+                    break;
+                case 34:
+                    if(Effect_34!=-1) return;
+                    if(hadDone) return;
+                    if(skill<5) return; skill=0;
+                    Effect_34=1; hadDone=1; Effecton();
+                    SS.Erase_Reward();
+                    Ch.UnDeath=1;
+                    break;
             }
         }
 
@@ -800,6 +958,18 @@ class Ability{
             hadDone=0;
             DrawEffect();
             switch(abilitymode){
+                case 13:
+                    if(Effect_13!=-1){
+                        Effect_13=-1;
+                        Ch.UnDeath=0;
+                    }
+                    break;
+                case 14:
+                    if(Effect_14){
+                        Effect_14=0;
+                        Ch.range=0;
+                    }
+                    break;
                 case 21:
                     if(Effect_21!=-1) DrawWorldMap(Ch.X(), Ch.Y(), 43, 'C');
                     for(int i=0; i<E.size(); i++){
@@ -846,22 +1016,22 @@ class Ability{
                     Effect_24--;
                     if(!Effect_24 or NowLife_24!=Ch.Life()){
                         Effect_24=-1;
-                        for(int i=Web_24[0]-4; i<=Web_24[0]+4; i++){
-                            for(int s=Web_24[1]-4; s<=Web_24[1]+4; s++){
+                        for(int i=Web_24[0]-5; i<=Web_24[0]+5; i++){
+                            for(int s=Web_24[1]-5; s<=Web_24[1]+5; s++){
                                 if(i>=1 and i<=21 and s>=1 and s<=21)
                                     Obstacle_Map[MapNo][i][s]-=2;
                             }
                         }
-                        for(int i=Web_24[0]-3; i<=Web_24[0]+3; i++){
-                            for(int s=Web_24[1]-3; s<=Web_24[1]+3; s++){
+                        for(int i=Web_24[0]-4; i<=Web_24[0]+4; i++){
+                            for(int s=Web_24[1]-4; s<=Web_24[1]+4; s++){
                                 if(i>=1 and i<=21 and s>=1 and s<=21)
                                     Obstacle_Map[MapNo][i][s]+=2;
                             }
                         }
-                        DrawWindowFrame(0,0,43,22,1);
+                        DrawWindowFrame(0,0,43,22,0);
                         if(NowLife_24==Ch.Life()){
                             for(int i=0; i<E.size(); i++){
-                                if(E[i].X()>=Web_24[0]-3 and E[i].X()<=Web_24[0]+3 and E[i].Y()>=Web_24[1]-3 and E[i].Y()<=Web_24[1]+3){
+                                if(E[i].X()>=Web_24[0]-4 and E[i].X()<=Web_24[0]+4 and E[i].Y()>=Web_24[1]-4 and E[i].Y()<=Web_24[1]+4){
                                     E[i].toDead();
                                     DrawWorldMap(E[i].X(), E[i].Y(), 124, 'E');
                                     data.Get_Score();
@@ -869,11 +1039,7 @@ class Ability{
                             }
                         }
                         for(int i=0; i<E.size(); i++) E[i].paralyze=0;
-
-
-
                     }
-
                     break;
                 case 25:
                     if(Effect_25==-1) break;
@@ -891,9 +1057,139 @@ class Ability{
                         for(int i=0; i<2; i++) data.Get_Score();
                     }
                     break;
+                case 32:
+                    skill=0;
+                    Itemlist.Erase_Item(1);
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].relifecount==-1) E[i].relifecount=0;
+                        if(E[i].relifecount>0){
+                                E[i].relifecount--;
+                                Check_Map[E[i].X()][E[i].Y()]=0;
+                                if(E[i].relifecount>0)
+                                    DrawWorldMap(E[i].X(), E[i].Y(), 7, '.');
+                                if(E[i].relifecount==0)
+                                    DrawWorldMap(E[i].prx, E[i].pry, 12, 'E');
+                        }
+
+                        if(E[i].Step.size()<10 or E[i].relifecount>0) continue;
+                        int nx=E[i].Step[1].first;
+                        int ny=E[i].Step[1].second;
+                        if(getitem and Ch.X()==E[i].Step.front().first and Ch.Y()==E[i].Step.front().second){
+                                E[i].relifecount=15;
+                                E[i].Step.clear();
+                                E[i].paralyze=14;
+                                World_Map[E[i].X()][E[i].Y()]='.';
+                                DrawWorldMap(E[i].prx, E[i].pry, 124, 'E');
+                                data.Get_Score();
+                        }
+                        else
+                            Itemlist.Set_Item(nx, ny);
+                    }
+                    for(int i=1; i<=21; i++){
+                        for(int s=1; s<=21; s++){
+                            if(Check_Map[i][s]) continue;
+                            if(Item_Map[i][s]!=-1 and World_Map[i][s]=='I'){
+                                DrawWorldMap(i,s,8,'E');
+                            }
+                        }
+                    }
+                    for(int i=0; i<E.size(); i++){
+                        if(E[i].relifecount==1){
+                            if(World_Map[E[i].X()][E[i].Y()]=='C')
+                                DrawWorldMap(E[i].X(), E[i].Y(), 43, 'C');
+                            else if(World_Map[E[i].X()][E[i].Y()]=='S'){
+                                DrawWorldMap(E[i].X(), E[i].Y(), 34, ' ');
+                                SS.Get_Reward(E[i].X(), E[i].Y());
+                            }else if(World_Map[E[i].X()][E[i].Y()]=='I')
+                                DrawWorldMap(E[i].X(), E[i].Y(), 40, 'E');
+                            else if(World_Map[E[i].X()][E[i].Y()]=='E')
+                                DrawWorldMap(E[i].X(), E[i].Y(), 44, 'E');
+                            else
+                                DrawWorldMap(E[i].X(), E[i].Y(), 34, ' ');
+                        }
+                    }
+                    break;
+                case 33:
+                    for(int i=1; i<=21; i++){
+                        for(int s=1; s<=21; s++)
+                            grid_33[i][s]=0;
+                    }
+                    for(int i=0; i<E.size(); i++){
+                        int nx=E[i].X(), ny=E[i].Y();
+                        int px=E[i].prx, py=E[i].pry;
+                        grid_33[E[i].prx][E[i].pry]=1;
+                        grid_33[nx][ny]=1;
+                        for(int s=0; s<2; s++){
+                            E[i].Move(Ch.X(), Ch.Y(), 0);
+                            if(World_Map[E[i].X()][E[i].Y()]=='E')
+                                World_Map[E[i].X()][E[i].Y()]='.';
+                            Check_Map[E[i].X()][E[i].Y()]=0;
+                            grid_33[E[i].X()][E[i].Y()]=1;
+                        }
+                        E[i].Reset_Pos(nx,ny,px,py);
+                        Check_Map[nx][ny]=1;
+                        Check_Map[px][py]=1;
+                    }
+                    if(skill==5){
+                        for(int i=0; i<E.size(); i++)
+                            DrawWorldMap(E[i].prx,E[i].pry,12,'E');
+                        skill=0;
+                    }
+                    break;
+                case 34:
+                    if(Effect_34==-1) break;
+                    if(getitem){
+                        Effect_34=-1;
+                        Ch.UnDeath=0;
+                        break;
+                    }
+                    Effect_34++; Effect_34%=5;
+                    if(Effect_34==2){
+                        Itemlist.Erase_Item();
+                        Itemlist.Set_Item();
+                    }
+                    DrawWhiteSpace(46,3,80,5);
+                    gotoxy(46,3); cout << "So, why are you standing here?";
+                    break;
+                case 35:
+                    skill=0;
+                    Itemlist.Erase_Item();
+                    if(getreward){
+                        memset(grid_35, 0, sizeof(grid_35));
+                        memset(Check_Map, 0, sizeof(Check_Map));
+                        memset(World_Map, '.', sizeof(World_Map));
+                        for(int i=1; i<=21; i++){
+                            for(int s=1; s<=21; s++){
+                                if(Obstacle_Map[MapNo][i][s]){
+                                    World_Map[i][s]='W';
+                                    grid_35[i][s]=1;
+                                }
+                            }
+                        }
+                        SS.Erase_Reward();
+                        int rx=rand()%21+1;
+                        int ry=rand()%21+1;
+                        World_Map[rx][ry]='C';
+                        Ch.ResetPos(rx,ry);
+                        for(int i=0; i<E.size(); i++){
+                            while(1){
+                                rx=rand()%21+1; ry=rand()%21+1;
+                                if(grid_35[rx][ry]) continue;
+                                grid_35[rx][ry]=1;
+                                World_Map[rx][ry]='E';
+                                Check_Map[rx][ry]=1;
+                                E[i].Reset_Pos(rx, ry, rx, ry);
+                                break;
+                            }
+                        }
+                        SS.Set_Reward();
+                        DrawWindowFrame(0,0,43,22,0);
+                    }
+                    break;
+
             }
 
-            getitem=0;
+            getitem=0; getreward=0;
         }
 
 };
@@ -967,6 +1263,8 @@ void Reset_Map(){
         }
     }
 
+    SS.Erase_Reward();
+    Itemlist.Erase_Item();
     for(int i=0; i<2; i++) SS.Set_Reward();
     data.score=0;
     data.Enemy_count=E.size();
@@ -1031,7 +1329,6 @@ int main(){
     bool suicide=0;
 
     while(!Ch.isDead()){
-
         //random part
         if(!gamemode.Stage()){
             int R=rand()%gamemode.ER();
@@ -1085,17 +1382,18 @@ int main(){
             }
         }
 
+        GameAbility.Passive();
+
         /*
-        for(int i=0; i<21; i++){
-            for(int s=0; s<21; s++){
-                if(Check_Map[i+1][s+1]){
-                    gotoxy(1+i*2, 4+s);
-                    if(World_Map[i+1][s+1]=='E') cout << 'R';
-                }
+        int ax=50, ay=5;
+        for(int i=1; i<=21; i++){
+            for(int s=1; s<21; s++){
+                gotoxy(ax+i, ay+s);
+                cout << Check_Map[i][s];
             }
         }
         */
-        GameAbility.Passive();
+
 
         //Character's move
         char key;
@@ -1155,6 +1453,7 @@ int main(){
             if(World_Map[Ch.X()][Ch.Y()]=='S'){
                 SS.Get_Reward(Ch.X(), Ch.Y());
                 data.Get_Score();
+                GameAbility.GetReward();
             }
             if(World_Map[Ch.X()][Ch.Y()]=='I'){
                 Itemlist.Get_Item(Ch.X(), Ch.Y());
@@ -1196,6 +1495,7 @@ int main(){
                 }
         }
         for(int i=0; i<E.size(); i++){
+            if(E[i].relifecount!=-1) continue;
             if(E[i].isDead()) E.erase(E.begin()+i);
         }
         explode=0;
