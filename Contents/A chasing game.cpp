@@ -1,3 +1,5 @@
+//Created by kevin101094
+
 #include <bits/stdc++.h>
 #include <conio.h>
 #include <windows.h>
@@ -369,7 +371,7 @@ public:
         if(!UnDeath) life--;
         DrawWhiteSpace(46,3,80,5);
         gotoxy(46,3); cout << "It hurts.";
-        if(UnDeath) cout << " But Nothing.";
+        if(UnDeath) cout << " But nothing happened.";
         if(!life) imDead=1;
     }
     bool toSet(){
@@ -406,6 +408,7 @@ public:
 
     int X(){return x;}
     int Y(){return y;}
+    int Type(){return type;}
     void Reset_Pos(int nx, int ny, int px, int py){
         x=nx; y=ny; prx=px; pry=py;
     }
@@ -661,6 +664,7 @@ Character Ch= Character(11,11);
 vector<vector<Object>> StageModeData;
 int NowStage=0;
 void Rand_Position(int tx, int ty);
+//Created by kevin101094
 
 class Ability{
     // No item
@@ -673,6 +677,8 @@ class Ability{
         int Effect_16= 0;
         int Effect_21=-1;
         int Effect_22=-1;
+        int Done_23=0;
+        int grid_23[22][22];
         int Effect_24=-1;
         int NowLife_24=0;
         int Web_24[2];
@@ -1002,6 +1008,17 @@ class Ability{
                     }
                     break;
                 case 23:
+                    if(!Done_23){
+                        for(int i=1; i<=21; i++){
+                            for(int s=1; s<=21; s++)
+                                grid_23[i][s]=Obstacle_Map[MapNo][i][s];
+                        }
+                        Done_23=1;
+                    }
+                    for(int i=1; i<=21; i++){
+                        for(int s=1; s<=21; s++)
+                            Obstacle_Map[MapNo][i][s]=grid_23[i][s];
+                    }
                     for(int i=0; i<E.size(); i++){
                         if(E[i].deathcount) E[i].deathcount--;
                         if(!E[i].deathcount){
@@ -1189,7 +1206,7 @@ class Ability{
                                 grid_35[rx][ry]=1;
                                 World_Map[rx][ry]='E';
                                 Check_Map[rx][ry]=1;
-                                E[i].Reset_Pos(rx, ry, rx, ry);
+                                E[i]=Enemy(rx,ry,E[i].Type());
                                 break;
                             }
                         }
