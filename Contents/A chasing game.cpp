@@ -399,6 +399,7 @@ public:
     int prx, pry;
     int deathcount;
     bool fiction=0;
+    pair<int,int> fictarget;
     bool UnDeath=0;
     int paralyze=0;
     int relifecount=-1;
@@ -433,6 +434,7 @@ public:
     }
 
     bool Move(int tx, int ty, bool toRest){
+        if(fiction){tx=fictarget.first; ty=fictarget.second;}
         if(paralyze){
             paralyze--; return 0;
         }
@@ -879,15 +881,18 @@ class Ability{
                     if(skill<3) return; skill-=3;
                     Effecton(); hadDone=1;
                     for(int i=0; i<10; i++){
-                        int T=0;
+                        int T=0, Esize=E.size();
                         while(T<1e5){
                             int x=rand()%21+1;
                             int y=rand()%21+1;
+                            int tE=rand()%Esize;
                             if(World_Map[x][y]!='.') continue;
                             World_Map[x][y]='E';
                             E.push_back(Enemy(x,y,4));
-                            E.back().deathcount=20;
-                            E.back().fiction=1;
+                            E.back().deathcount=30;
+                            E.back().fiction=tE+1;
+                            E.back().fictarget.first=E[tE].X();
+                            E.back().fictarget.second=E[tE].Y();
                             break;
                         }
                     }
@@ -1003,11 +1008,17 @@ class Ability{
                             E[i].toDead();
                             if(Obstacle_Map[MapNo][E[i].prx][E[i].pry])
                                 Obstacle_Map[MapNo][E[i].prx][E[i].pry]=0;
+                            Check_Map[E[i].prx][E[i].pry]=0;
+                            Check_Map[E[i].X()][E[i].Y()]=0;
                         }
                         else if(E[i].fiction){
                             Check_Map[E[i].prx][E[i].pry]=0;
                             Check_Map[E[i].X()][E[i].Y()]=0;
                             Obstacle_Map[MapNo][E[i].prx][E[i].pry]=1;
+                            int tx=E[E[i].fiction-1].X();
+                            int ty=E[E[i].fiction-1].Y();
+                            E[i].fictarget.first=tx;
+                            E[i].fictarget.second=ty;
                         }
                     }
                     break;
@@ -1387,9 +1398,9 @@ int main(){
         /*
         int ax=50, ay=5;
         for(int i=1; i<=21; i++){
-            for(int s=1; s<21; s++){
+            for(int s=1; s<=21; s++){
                 gotoxy(ax+i, ay+s);
-                cout << Check_Map[i][s];
+                cout << Obstacle_Map[MapNo][i][s];
             }
         }
         */
