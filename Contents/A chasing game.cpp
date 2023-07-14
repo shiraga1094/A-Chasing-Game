@@ -113,7 +113,7 @@ void TipsMessage(){
     gotoxy(x,y); cout << "How to play:";
     gotoxy(x-3,y+1); cout << "Use WASD to move.";
     gotoxy(x-5, y+2); cout << "Press space to set bomb.";
-    gotoxy(x-20, y+3); cout << "'C'=You, 'I'=Bomb, 'E'=Enemy, 'S'=Score, 'O'=Set Bomb";
+    gotoxy(x-20, y+3); cout << "'C'=You, 'I'=Item, 'E'=Enemy, 'S'=Score, 'O'=Set Bomb";
     gotoxy(x-22, y+4); cout << "Game ends when enemies catch you or you touch the set bomb.";
     gotoxy(x+1, y+5); cout << "Have fun.";
     gotoxy(x-6, y+6); cout <<"(Press any key to start.)";
@@ -669,7 +669,7 @@ void Rand_Position(int tx, int ty);
 class Ability{
     // No item
     private:
-        int abilitymode;
+        int abilitymode=-1;
         int skill=2;
         int Effect_13=-1;
         int Effect_14= 0;
@@ -699,7 +699,7 @@ class Ability{
         void GetItem(){skill++; if(skill>5) skill=5; getitem=1;}
         void GetReward(){getreward=1;}
         void DrawSkillLimit(){
-            if(abilitymode==11) return;
+            if(abilitymode==11 or abilitymode==0) return;
             DrawWhiteSpace(0,1,12,2);
             gotoxy(0,1); cout << "Skill:";
             SetColor(119);
