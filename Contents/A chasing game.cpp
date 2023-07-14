@@ -751,10 +751,10 @@ class Ability{
                         for(int i=0; i<E.size(); i++){
                             if(World_Map[E[i].prx][E[i].pry]=='.')
                                 DrawWorldMap(E[i].prx, E[i].pry, 7, '.');
+                            if(World_Map[E[i].X()][E[i].Y()]=='E')
+                                DrawWorldMap(E[i].X(), E[i].Y(), 13, 'E');
                             if(World_Map[Ch.X()][Ch.Y()]=='E')
                                 DrawWorldMap(Ch.X(), Ch.Y(), 75, 'C');
-                            else if(World_Map[E[i].X()][E[i].Y()]=='E')
-                                DrawWorldMap(E[i].X(), E[i].Y(), 13, 'E');
                         }
                     }
                     break;
