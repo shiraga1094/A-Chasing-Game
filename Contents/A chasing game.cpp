@@ -259,7 +259,7 @@ class Game_Data{
 
         void Output(){
             DrawWhiteSpace(18,1,20,2);
-            DrawWhiteSpace(27,1,29,2);
+            DrawWhiteSpace(27,1,30,2);
             DrawWhiteSpace(36,1,38,2);
 
             if(Stage>0){
@@ -351,8 +351,8 @@ public:
         int T=0, R=1;
         while(T<4){
             T++; if(T>2) R=-1;
-            nx=x+D*Dx*R;
-            ny=y+(D^1)*Dy*R;
+            nx=x+(D*Dx*R)*(range+1);
+            ny=y+((D^1)*Dy*R)*(range+1);
             if(OutofRange(nx,ny) or Check_Map[nx][ny]){
                     D^=1;
                     continue;
@@ -362,6 +362,16 @@ public:
             y=ny;
             break;
         }
+    }
+    int AI_CheckEnemy(){
+        int ans=0;
+        for(int i=x-3; i<=x+3; i++){
+            for(int s=y-3; s<=y+3; s++){
+                if(OutofRange(i,s)) continue;
+                if(Check_Map[i][s]) ans++;
+            }
+        }
+        return ans/2;
     }
 
     bool isDead(){
@@ -563,6 +573,7 @@ class Reward{
     public:
         int PosX(){return reward[0].first;}
         int PosY(){return reward[0].second;}
+        int Size(){return reward.size();}
         void Set_Reward(){
             int T=0;
             while(T<1e5){
@@ -601,8 +612,8 @@ class Item{
         bool paralyze;
         deque<pair<int,int>> itemlist;
     public:
-        int X(){return x;}
-        int Y(){return y;}
+        int X(){return itemlist.back().first;}
+        int Y(){return itemlist.back().second;}
         void StageMode(){paralyze=1;}
         int Checkitemsize(){return itemlist.size();}
 
@@ -688,16 +699,26 @@ class Ability{
         int grid_33[22][22];
         int Effect_34=-1;
         int grid_35[22][22];
+        int Effect_41=50;
+        int Effect_41_2=-1;
+        int ability_42[3]={13,15,16};
+        pair<int,int> ItemPos_42={-1,-1};
+        int Effect_42=-1;
+        int abilitymode_42=-1;
+        bool Done_42=0;
         bool getitem=0;
         bool getreward=0;
+        bool Chisdead=0;
     public:
 
         int ABM(){return abilitymode;}
         bool hadDone=0;
         void GetData(){abilitymode=gamemode.AB();}
+        void Resetskill(){skill=2;}
 
         void GetItem(){skill++; if(skill>5) skill=5; getitem=1;}
         void GetReward(){getreward=1;}
+        void Chtodead(){Chisdead=1;}
         void DrawSkillLimit(){
             if(abilitymode==11 or abilitymode==0) return;
             DrawWhiteSpace(0,1,12,2);
@@ -818,6 +839,24 @@ class Ability{
                             DrawWorldMap(E[i].prx, E[i].pry, 15, 'E');
                     }
                     break;
+                case 41:
+                    if(Effect_41<10){
+                        DrawWorldMap(Ch.X(), Ch.Y(), 43, 'C');
+                    }
+                    break;
+                case 42:
+                    int tx=ItemPos_42.first, ty=ItemPos_42.second;
+                    if(ItemPos_42.first!=-1){
+                        DrawWorldMap(tx, ty, 13, 'I');
+                        if(Ch.X()==tx and Ch.Y()==ty) DrawWorldMap(tx,ty,11,'C');
+                    }
+                    if(Effect_42>0) DrawWorldMap(Ch.X(), Ch.Y(), 43, 'C');
+                    if(abilitymode_42!=-1){
+                        abilitymode=ability_42[abilitymode_42];
+                        DrawEffect();
+                        abilitymode=42;
+                    }
+                    break;
             }
         }
         void Effecton(){
@@ -847,7 +886,7 @@ class Ability{
                 case 15:
                     if(Effect_15!=-1) return;
                     if(hadDone) return;
-                    if(skill<2) return; skill-=2;
+                    if(skill<1) return; skill-=1;
                     Effecton();
                     Effect_15=1; hadDone=1;
                     DrawEffect();
@@ -865,7 +904,7 @@ class Ability{
                     for(int i=0; i<E.size(); i++){
                         int nx=E[i].X(), ny=E[i].Y();
                         int px=E[i].prx, py=E[i].pry;
-                        if(px>=Ch.X()-2 and px<=Ch.X()+2 and py>=Ch.Y()-2 and py<=Ch.Y()+2){
+                        if(px>=Ch.X()-3 and px<=Ch.X()+3 and py>=Ch.Y()-3 and py<=Ch.Y()+3){
                             E[i].paralyze=5;
                         }
                         if(Effect_16) E[i].paralyze=5;
@@ -949,6 +988,7 @@ class Ability{
                     for(int i=0; i<E.size(); i++){
                         E[i].toDead();
                         if(!E[i].UnDeath) data.Get_Score();
+                        Check_Map[E[i].X()][E[i].Y()]=0;
                     }
                     Effect_31=-1;
                     Rand_Position(Ch.X(), Ch.Y());
@@ -1214,10 +1254,59 @@ class Ability{
                         DrawWindowFrame(0,0,43,22,0);
                     }
                     break;
+                case 41:
+                    Effect_41--; Ch.UnDeath=1;
+                    if(Chisdead){
+                        Effect_41_2=1;
+                        skill-=2; if(skill<0) skill=0;
+                    }
+                    if(!Effect_41){
+                        Effect_41=50;
+                        if(skill<3 and Effect_41_2==1){
+                            Ch.UnDeath=0; Ch.toDead(); data.LifeDecrease();
+                            Ch.UnDeath=1;
+                        }
+                        skill-=3; if(skill<0) skill=0;
+                        Effect_41_2=-1;
+                    }
+                    break;
+                case 42:
+                    bool isgetitem=(getitem and ItemPos_42.first==Ch.X() and ItemPos_42.second==Ch.Y());
+                    if(ItemPos_42.first==-1 and Effect_42==-1){
+                        Itemlist.Set_Item();
+                        ItemPos_42.first=Itemlist.X();
+                        ItemPos_42.second=Itemlist.Y();
+                    }
+                    if(isgetitem){
+                        abilitymode_42=rand()%3;
+                        ItemPos_42.first=-1;
+                        SS.Set_Reward();
+                    }
+                    if(abilitymode_42!=-1){
+                        Itemlist.Erase_Item();
+                        int bskill=skill;
+                        abilitymode=ability_42[abilitymode_42];
+                        skill=4; Active(); skill=bskill;
+                        abilitymode=42;
+                    }else{
+                        SS.Erase_Reward();
+                    }
+                    Effect_42--;
+
+                    if(getreward and abilitymode_42!=-1){
+                        Effect_42=50; Ch.UnDeath=0;
+                        abilitymode_42=-1;
+                        SS.Erase_Reward();
+                        for(; skill>0; skill--) Effect_42-=10;
+                    }
+                    if(!Effect_42){
+                        Effect_42=-1;
+                    }
+                    break;
 
             }
 
-            getitem=0; getreward=0;
+            getitem=0; getreward=0; Chisdead=0;
         }
 
 };
@@ -1250,7 +1339,7 @@ void WriteIn(){
         StageModeData[No]=tmp;
     }
     ifs.close();
-    std::ifstream ifs2("AbilityName.txt", std::ios::in);
+    std::ifstream ifs2("AbilityName.chg", std::ios::in);
     int T; string SS;
     for(int i=0; ifs2>>T; i++){
         while(T--){
@@ -1299,6 +1388,7 @@ void Reset_Map(){
     data.life=3;
     DrawGameLimits(gamemode.Stage());
     if(!gamemode.Stage()) data.Bomb_count=1;
+    GameAbility.Resetskill();
 
 }
 
@@ -1352,7 +1442,7 @@ int main(){
     Reset_Map();
 
     int explode=0;
-    int AIturn=0, a=50, b=5;
+    int AIturn=0, a=50, b=5, step=0;
     int Paralyze=0;
     bool suicide=0;
 
@@ -1456,20 +1546,40 @@ int main(){
             }
         }
         if(gamemode.AI()){
-            Ch.AI_Move(SS.PosX(), SS.PosY());
-            Sleep(50);
+            int bx=Ch.X(), by=Ch.Y(), T=0;
+            int tx=1,ty=1;
+            if(SS.Size()){tx=SS.PosX(); ty=SS.PosY();}
+            else if(!SS.Size()){
+                if(Itemlist.Checkitemsize()){
+                    tx=Itemlist.X(); ty=Itemlist.Y();
+                }
+            }
+            if(abs(bx-tx)>3 and abs(by-ty)>3){
+                for(int i=bx-5; i<=bx+5; i++){
+                    for(int s=by-5; s<=by+5; s++){
+                        if(OutofRange(i,s)) continue;
+                        if(Item_Map[i][s]!=-1){
+                            tx=i, ty=s;
+                            break;
+                        }
+                    }
+                }
+            }
+            if(step>200){tx=rand()%21+1; ty=rand()%21+1;}
+            Ch.AI_Move(tx,ty);
+            while(((Ch.X()==bx and Ch.Y()==by) or Ch.AI_CheckEnemy()>3) and T<5){
+                GameAbility.Active();
+                Ch.AI_Move(tx,ty);
+                T++;
+            }
+            step++;
+
+            //Sleep(30);
             DrawWhiteSpace(46,3,80,5);
         }
         if(Check_Map[Ch.X()][Ch.Y()] or Bomb_Map[Ch.X()][Ch.Y()]){
-            if(gamemode.AI() and AIturn<30){
-                gotoxy(a,b++); cout << data.score << "   " << data.Enemy_count;
-                if((AIturn+1)%10==0){
-                    a+=9; b=5;
-                }
-                Reset_Map();
-                AIturn++;
-                continue;
-            }else Ch.toDead();
+            Ch.toDead();
+            GameAbility.Chtodead();
             World_Map[Ch.X()][Ch.Y()]='C';
             data.LifeDecrease();
             Paralyze=1;
@@ -1482,11 +1592,13 @@ int main(){
                 SS.Get_Reward(Ch.X(), Ch.Y());
                 data.Get_Score();
                 GameAbility.GetReward();
+                step=0;
             }
             if(World_Map[Ch.X()][Ch.Y()]=='I'){
                 Itemlist.Get_Item(Ch.X(), Ch.Y());
                 if(GameAbility.ABM()==11) data.Get_Bomb();
                 else GameAbility.GetItem();
+                step=0;
             }
             if(World_Map[Ch.X()][Ch.Y()]=='P'){
                 Paralyze=5;
@@ -1528,7 +1640,18 @@ int main(){
         }
         explode=0;
         if(suicide) World_Map[Ch.X()][Ch.Y()]='C';
-        if(Ch.isDead()) World_Map[Ch.X()][Ch.Y()]='X';
+        if(Ch.isDead()){
+            if(gamemode.AI() and AIturn<30){
+                gotoxy(a,b++); cout << data.score << "   " << data.Enemy_count;
+                if((AIturn+1)%10==0){
+                    a+=9; b=5;
+                }
+                Reset_Map();
+                AIturn++; step=0;
+                continue;
+            }else
+                World_Map[Ch.X()][Ch.Y()]='X';
+        }
         suicide=0;
 
         DrawWindowFrame(0,0,43,22,0);
