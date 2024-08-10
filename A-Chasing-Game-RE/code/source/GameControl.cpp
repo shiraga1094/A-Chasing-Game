@@ -102,6 +102,7 @@ void GameControl::Initialize() {
 	enemylist->cleartarget();
 	ability->Initial(&AbilityNo);
 	view->DrawChange();
+	view->DrawObstacle();
 	gamedata->Enemy_count = gamedata->EnemyAmount;
 	gamedata->Item_count = 2;
 	gamedata->Life_count = 3;

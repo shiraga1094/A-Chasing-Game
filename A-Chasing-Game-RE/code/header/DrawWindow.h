@@ -23,7 +23,7 @@ public:
 	void DrawChange();
 	void DrawStatusFrame();
 	void DrawStatus(GameData* gamedata);
-	void DrawMessage();
+	void DrawObstacle();
 	void SetQuickEffect(std::pair<int, int> pos, char ch, int color);
 	void SetEffect(std::pair<int, int> pos, char ch, int color);
 	void SetClear(std::pair<int, int> pos);

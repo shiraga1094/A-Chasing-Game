@@ -110,8 +110,23 @@ void DrawWindow::DrawStatus(GameData* gamedata) {
 	gotoxy(44, 1); std::cout << ' ';
 	gotoxy(44, 1); std::cout << gamedata->Life_count;
 }
-void DrawWindow::DrawMessage() {
-
+void DrawWindow::DrawObstacle() {
+	for (int dx = 0; dx < Width; dx++) {
+		for (int dy = 0; dy < Height; dy++) {
+			gotoxy(MapBx + dx * 2 + 1, MapBy + dy + 1);
+			if (mapdata->checkObstacle({ dx, dy })) {
+				OnColor('.', 136);
+			}
+		}
+	}
+	for (int dx = 0; dx < Width-1; dx++) {
+		for (int dy = 0; dy < Height; dy++) {
+			gotoxy(MapBx + dx * 2 + 2, MapBy + dy + 1);
+			if (mapdata->checkObstacle({ dx, dy }) && mapdata->checkObstacle({dx+1, dy})){
+				OnColor('.', 136);
+			}
+		}
+	}
 }
 void DrawWindow::SetQuickEffect(std::pair<int, int> pos, char ch, int color) {
 	gotoxy(MapBx + pos.first * 2 + 1, MapBy + pos.second + 1);
