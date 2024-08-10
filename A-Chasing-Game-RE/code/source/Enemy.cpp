@@ -66,7 +66,7 @@ void Enemy::Move(std::pair<int, int> target) {
 		if (enemytype == Web && !isInMoveLimit(nxtPos)) {
 			continue;
 		}
-		if (nxtPos.first < 0 || nxtPos.first >= Width || nxtPos.second<0 || nxtPos.second>Height) {
+		if (nxtPos.first < 0 || nxtPos.first >= Width || nxtPos.second<0 || nxtPos.second>=Height) {
 			continue;
 		}
 		if (!CaptureItem && mapdata->checknowMap(nxtPos) == 'I')
