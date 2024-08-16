@@ -95,7 +95,7 @@ void Achievement::Output() {
 	Encryption();
 }
 void Achievement::Update(GameData* gamedata) {
-	data[*AbilityNo].Max_Score[*GameModeNo] = std::max(gamedata->Max_Score_count,data[*AbilityNo].Max_Score[*GameModeNo]);
+	data[*AbilityNo].Max_Score[*GameModeNo] = std::max(gamedata->Score_count,data[*AbilityNo].Max_Score[*GameModeNo]);
 
 	data[*AbilityNo].Max_Item[*GameModeNo] = std::max(gamedata->Max_Item_count,data[*AbilityNo].Max_Item[*GameModeNo]);
 
