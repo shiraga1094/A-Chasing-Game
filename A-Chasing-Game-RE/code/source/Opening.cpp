@@ -1,10 +1,11 @@
 #include "Opening.h"
 
-Opening::Opening(GameData* _gamedata, DrawWindow* _view, StageModeData* _data, int* _MapNo, int* _AbilityNo, int* _GameModeNo) {
+Opening::Opening(GameData* _gamedata, DrawWindow* _view, StageModeData* _data, Achievement* _achievement, int* _MapNo, int* _AbilityNo, int* _GameModeNo) {
 	gamedata = _gamedata;
 	view = _view;
 	MapNo = _MapNo;
 	stagemodedata = _data;
+	achievement = _achievement;
 	AbilityNo = _AbilityNo;
 	GameModeNo = _GameModeNo;
 }
@@ -104,45 +105,85 @@ void Opening::AbilityChoise() {
 	gotoxy(x + 3, y + 1); std::cout << "Level: ";
 	gotoxy(x + 3, y + 2); std::cout << "Name: ";
 
-	int colorno[5] = { 10,12,3,4,8 };
+	int colorno[6] = { 10,12,3,4,8,15 };
 	x = 16; y = 11;
 	int now = 0, level = 0, pos = 0;
 	while (true) {
 		gotoxy(x, y + now);
 		SetColor(11); std::cout << 'O'; SetColor();
 		gotoxy(24, 11); SetColor(colorno[level]); std::cout << level +1;
-		gotoxy(23, 12); std::cout << stagemodedata->giveAbility_Name(level, pos);
+		gotoxy(23, 12);
+		if (!achievement->CheckisAchieve(level * 10 + pos)) {
+			std::cout << "???";
+		}
+		else {
+			std::cout << stagemodedata->giveAbility_Name(level, pos);
+		}
 		SetColor();
 		char key = _getch();
 		gotoxy(x, y + now); std::cout << ' ';
 		gotoxy(23, 12); std::cout << "                                         ";
 		if (key == ' ') {
+			if (!achievement->CheckisAchieve(level * 10 + pos)) {
+				continue;
+			}
 			AllClear();
 			*AbilityNo = level * 10 + pos;
 			return;
 		}
-		else if (key == 'w') {
-			now--; if (now < 0) now = 1;
-			pos = 0;
-		}
-		else if (key == 's') {
-			now++; if (now > 1) now = 0;
-			pos = 0;
+		else if (key == 'w' || key=='s') {
+			now ^= 1;
+			if (now == 0) {
+				pos = 0;
+			}
+			else {
+				while (pos < stagemodedata->giveAbilityAmount(level) && !achievement->CheckisAchieve(level * 10 + pos)) {
+					pos++;
+				}
+			}
 		}
 		else if (key == 'd') {
 			if (now == 0) {
-				level++; if (level >= stagemodedata->giveAbilityLevelLimit()) level = 0;
+				level++; 
+				while (level < stagemodedata->giveAbilityLevelLimit() && !achievement->CheckLevelAchieve(level)) {
+					level++;
+				}
+				if (level >= stagemodedata->giveAbilityLevelLimit()) level = 0;
+				while (level < stagemodedata->giveAbilityLevelLimit() && !achievement->CheckLevelAchieve(level)) {
+					level++;
+				}
 			}
 			else {
-				pos++; if (pos >= stagemodedata->giveAbilityAmount(level)) pos = 0;
+				pos++;
+				while (pos < stagemodedata->giveAbilityAmount(level) && !achievement->CheckisAchieve(level * 10 + pos)) {
+					pos++;
+				}
+				if (pos >= stagemodedata->giveAbilityAmount(level)) pos = 0;
+				while (pos < stagemodedata->giveAbilityAmount(level) && !achievement->CheckisAchieve(level * 10 + pos)) {
+					pos++;
+				}
 			}
 		}
 		else if (key == 'a') {
 			if (now == 0) {
-				level--; if (level < 0) level = stagemodedata->giveAbilityLevelLimit() - 1;
+				level--; 
+				while (level >=0 && !achievement->CheckLevelAchieve(level)){
+					level--;
+				}
+				if (level < 0) level = stagemodedata->giveAbilityLevelLimit() - 1;
+				while (level >= 0 && !achievement->CheckLevelAchieve(level)) {
+					level--;
+				}
 			}
 			else {
-				pos--; if (pos < 0) pos = stagemodedata->giveAbilityAmount(level) - 1;
+				pos--;
+				while (pos >= 0 && !achievement->CheckisAchieve(level * 10 + pos)) {
+					pos--;
+				}
+				if (pos < 0) pos = stagemodedata->giveAbilityAmount(level) - 1;
+				while (pos >= 0 && !achievement->CheckisAchieve(level * 10 + pos)) {
+					pos--;
+				}
 			}
 		}
 	}

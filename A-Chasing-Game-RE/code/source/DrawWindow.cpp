@@ -143,3 +143,13 @@ void DrawWindow::DrawGameOver() {
 	WindowClear();
 	gotoxy(20, 10); std::cout << "Game Over";
 }
+void DrawWindow::DrawAchievement(Achievement* achievement, int *GameModeNo) {
+	gotoxy(14, 12); 
+	std::cout << "Highest history record:";
+	gotoxy(19, 13); 
+	std::cout << "Score: " << achievement->giveAchieveData().Max_Score[*GameModeNo];
+	gotoxy(19, 14);
+	std::cout << "Kill: " << achievement->giveAchieveData().Max_Kill[*GameModeNo];
+	gotoxy(10, 15);
+	std::cout << "(Press any key to end the game)";
+}

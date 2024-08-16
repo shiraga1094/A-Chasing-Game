@@ -20,10 +20,20 @@ void Message::outputName() {
 }
 void Message::output() {
 	for (int c = BaseY + 7; c <= BaseY+12; c++) {
-		gotoxy(BaseX, c); std::cout << "                                                 ";
+		gotoxy(BaseX, c); std::cout << "                                       ";
 	}
-	for (int i = 0; i < Command.size(); i++) {
-		gotoxy(BaseX, BaseY + 6 + i); std::cout << Command[i];
+	int len = Command.size(), delta = 0;
+	for (int i = 0; i < len; i++) {
+		gotoxy(BaseX, BaseY + 6 + i + delta);
+		for (int s = 0; s < Command[i].length(); s++) {
+			if (Command[i][s] == '#') {
+				delta++;
+				gotoxy(BaseX, BaseY + 6 + i + delta);
+			}
+			else {
+				std::cout << Command[i][s];
+			}
+		}
 	}
 	Command.clear();
 	Command.push_back("Command Output:");

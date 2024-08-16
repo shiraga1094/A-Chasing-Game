@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <vector>
+#include <deque>
+#include "EnumStatus.h"
 
 class GameData {
 public:
@@ -24,9 +26,16 @@ public:
 	int Item_count;
 	int Score_count;
 	int Kill_count;
+	int Round_count;
+	int Max_Item_count;
+	int Max_Score_count;
+	int Enemy_getItem_count;
 
 	bool isGetItem;
 	bool isGetScore;
+	bool isPerfect;
+
+	InputStatus lastkey;
 };
 
 

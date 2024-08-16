@@ -27,16 +27,18 @@ private:
 	int Scatter_count;
 	int MoveLimitPos[4];
 	std::pair<int, int> MoveLimitCenter;
+	std::pair<int, int> nowtarget;
+	int targetturn;
 	bool isInMoveLimit(std::pair<int,int> pos);
 	int Paralyze_count;
 	int CountDown;
 
 	bool CaptureItem, CaptureScore;
-
+	void ChangeTarget(std::pair<int, int> pos);
 public:
 	Enemy(std::pair<int,int> _Pos, int _enemytype, MapData* _mapdata);
 	
-	void Move(std::pair<int,int> target);
+	void Move(std::pair<int,int> pos);
 	std::pair<int, int> Move_Random(std::pair<int,int> target, int try_count);
 	std::pair<int, int> Move_Straight(std::pair<int, int> target, int try_count);
 	std::pair<int, int> Move_Trap(std::pair<int, int> target, int try_count);

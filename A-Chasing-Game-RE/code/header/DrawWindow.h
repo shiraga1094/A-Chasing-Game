@@ -5,6 +5,7 @@
 #include "CursorControl.h"
 #include "MapData.h"
 #include "GameData.h"
+#include "Achievement.h"
 
 const int MapBx = 0, MapBy = 3;
 class DrawWindow {
@@ -28,7 +29,7 @@ public:
 	void SetEffect(std::pair<int, int> pos, char ch, int color);
 	void SetClear(std::pair<int, int> pos);
 	void DrawGameOver();
-
+	void DrawAchievement(Achievement* achievement, int* GameModeNo);
 };
 
 

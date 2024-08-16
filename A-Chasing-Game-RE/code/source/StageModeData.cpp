@@ -4,7 +4,7 @@ StageModeData::StageModeData() {
 
 }
 void StageModeData::WriteIn() {
-    std::ifstream ifs("StageModeData.txt", std::ios::in);
+    std::ifstream ifs("Data/StageModeData.txt", std::ios::in);
     std::vector<Object> tmp;
     for (int i = 0; i <= 100; i++) stagemodedata.push_back(tmp);
     int No, ObjectAmount;
@@ -29,7 +29,7 @@ void StageModeData::WriteIn() {
         stagemodedata[No] = tmp;
     }
     ifs.close();
-    std::ifstream ifs2("AbilityName.chg", std::ios::in);
+    std::ifstream ifs2("Data/AbilityName.chg", std::ios::in);
     int T; std::string SS;
     for (int i = 0; ifs2 >> T; i++) {
         Ability_Name.push_back({});

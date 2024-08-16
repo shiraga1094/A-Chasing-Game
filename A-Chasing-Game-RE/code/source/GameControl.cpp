@@ -11,12 +11,15 @@ GameControl::GameControl() {
 	view = new DrawWindow(mapdata);
 	stagemodedata = new StageModeData();
 	message = new Message(&AbilityNo, &GameModeNo);
+	achievement = new Achievement(&AbilityNo, &GameModeNo);
 	ability = new Ability(mapdata, gamedata, character, enemylist, 
 		view, item, score, message);
-	opening = new Opening(gamedata, view, stagemodedata, &MapNo, &AbilityNo, &GameModeNo);
+	opening = new Opening(gamedata, view, stagemodedata, 
+		achievement, &MapNo, &AbilityNo, &GameModeNo);
 }
 void GameControl::OpeningSet() {
 	stagemodedata->WriteIn();
+	achievement->Input();
 	opening->Run();
 	mapdata->inputObstacle(MapNo, stagemodedata);
 	int level = AbilityNo / 10, now = AbilityNo % 10;
@@ -107,6 +110,8 @@ void GameControl::Initialize() {
 	gamedata->Item_count = 2;
 	gamedata->Life_count = 3;
 	gamedata->Kill_count = gamedata->Score_count = 0;
+	gamedata->Max_Item_count = gamedata->Max_Score_count = 0;
+	gamedata->Round_count = 0;
 	item->ResetPos();
 	gamedata->isGetItem = gamedata->isGetScore = false;
 	message->outputName();
@@ -151,6 +156,7 @@ void GameControl::EnemyMoveEvent() {
 void GameControl::CheckBeforePassiveEvent() {
 	enemylist->cleartarget();
 	ability->Before_Passive();
+	achievement->CheckSpecialUnlock(gamedata);
 }
 void GameControl::CheckInputEvent() {
 	while (true) {
@@ -182,8 +188,10 @@ bool GameControl::CharacterMoveEvent(InputStatus key) {
 	}
 	else {
 		character->Move(key);
+		gamedata->lastkey = key;
 	}
 	mapdata->Update_nxtMap(character->givePos(), 'C');
+	gamedata->Round_count++;
 	return true;
 }
 void GameControl::UseAbilityEvent() {
@@ -196,6 +204,8 @@ void GameControl::CheckItemEvent() {
 	if (item->isGetItem(character->givePos())) {
 		gamedata->Item_count = min(5, gamedata->Item_count + 1);
 		gamedata->isGetItem = true;
+		gamedata->isPerfect = false;
+		gamedata->Max_Item_count++;
 	}
 	else {
 		gamedata->isGetItem = false;
@@ -205,6 +215,8 @@ void GameControl::CheckScoreEvent() {
 	if (score->isGetScore(character->givePos())) {
 		gamedata->Score_count++;
 		gamedata->isGetScore = true;
+		gamedata->isPerfect = false;
+		gamedata->Max_Score_count++;
 	}
 	else {
 		gamedata->isGetScore = false;
@@ -227,6 +239,7 @@ void GameControl::CheckEnemyDead() {
 void GameControl::CheckCharacterDead() {
 	if (mapdata->isInDanger(character->givePos())) {
 		character->toDead();
+		gamedata->isPerfect = false;
 	}
 	if (character->checkisDead()) {
 		gamedata->Life_count--;
@@ -248,6 +261,10 @@ void GameControl::GameOverEvent() {
 	Sleep(3000);
 	view->DrawGameOver();
 	Sleep(3000);
+	achievement->Update(gamedata);
+	achievement->Output();
+	view->DrawAchievement(achievement, &GameModeNo);
+	_getch();
 	status = Exit;
 }
 void GameControl::DrawWindow_Initial() {
@@ -256,6 +273,7 @@ void GameControl::DrawWindow_Initial() {
 }
 void GameControl::DrawWindow_Change() {
 	view->DrawChange();
+	view->DrawObstacle();
 	view->DrawStatus(gamedata);
 	message->output();
 }

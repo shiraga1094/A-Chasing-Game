@@ -10,7 +10,12 @@ GameData::GameData() {
 	Life_count = 3;
 	Item_count = Score_count = 0;
 	Kill_count = 0;
+	Max_Item_count = Max_Score_count = 0;
+	Enemy_getItem_count = 0;
 
 	isGetItem = false;
 	isGetScore = false;
+	isPerfect = true;
+
+	lastkey = Space;
 }

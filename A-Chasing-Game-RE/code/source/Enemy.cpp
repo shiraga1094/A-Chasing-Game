@@ -29,12 +29,23 @@ Enemy::Enemy(std::pair<int,int> _Pos, int _enemytype, MapData* _mapdata) {
 		MoveLimitCenter = Pos;
 	}
 	CaptureItem = CaptureScore = false;
+	targetturn = 0;
+}
+void Enemy::ChangeTarget(std::pair<int, int> pos) {
+	if (!targetturn) {
+		nowtarget = pos;
+		targetturn = 3;
+	}
+	else {
+		targetturn--;
+	}
 }
 bool Enemy::isInMoveLimit(std::pair<int, int> pos) {
 	return pos.first >= MoveLimitPos[0] && pos.second >= MoveLimitPos[1] && pos.first <= MoveLimitPos[2] && pos.second <= MoveLimitPos[3];
 }
-void Enemy::Move(std::pair<int, int> target) {
-	std::pair<int, int> nxtPos;
+void Enemy::Move(std::pair<int, int> pos) {
+	ChangeTarget(pos);
+	std::pair<int, int> nxtPos, target = nowtarget;
 	int try_count = 0;
 	EnemyType tmp_enemytype = enemytype;
 	if (CountDown > 0) {

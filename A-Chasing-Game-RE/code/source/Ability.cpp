@@ -67,7 +67,7 @@ void Ability::Active() {
 			gamedata->Item_count -= 3;
 			Effect[12] = 1;
 			for (int i = 0; i < 5; i++) {
-				enemylist->push_back(mapdata->giveLegalPos({ 0,0,Width, Height }), 5, mapdata);
+				enemylist->push_back(mapdata->giveLegalPos({ ch.first - 3, ch.second - 3, ch.first + 4, ch.second + 4 }), 5, mapdata);
 				enemylist->setCountDown(enemylist->size() - 1, 21);
 				enemylist->setFiction(enemylist->size() - 1);
 			}
@@ -105,6 +105,12 @@ void Ability::Active() {
 			gamedata->Item_count-=3;
 			message->input(str_32[Effect[32]]);
 			message->output();
+			break;
+		case 42:
+			if (Effect[42] == 1) return;
+			if (gamedata->Item_count < 2) return;
+			gamedata->Item_count -= 2;
+			Effect[42] = 1;
 			break;
 	}
 	view->DrawStatus(gamedata);
@@ -171,6 +177,44 @@ void Ability::Before_Passive() {
 			for (int i = 0; i < enemylist->size(); i++) {
 				enemylist->SetEnemyType(i, Straight);
 				enemylist->setCaptureItem(i);
+			}
+			break;
+		case 40:
+			view->SetClear(knife);
+			break;
+		case 41:
+			for (int i = 0; i < enemylist->size(); i++) {
+				enemylist->setCaptureItem(i);
+				enemylist->setCaptureScore(i);
+			}
+			break;
+		case 42:
+			view->SetClear(knife);
+			for (std::pair<int, int> tmp : enemyknife) {
+				view->SetClear(tmp);
+			}
+			enemyknife.clear();
+			break;
+		case 43:
+			if (Count[43] < 1000) {
+				view->SetQuickEffect(ch, 'C', 11);
+			}
+			break;
+		case 47:
+			if (Count[47] <= 100) {
+				message->input(str_47[0]);
+			}
+			else if (Count[47] <= 200) {
+				message->input(str_47[1]);
+			}
+			else if (Count[47] <= 300) {
+				message->input(str_47[2]);
+			}
+			message->output();
+			break;
+		case 50:
+			if (gamedata->Round_count == 0) {
+				standard = clock();
 			}
 			break;
 	}
@@ -356,6 +400,7 @@ void Ability::Passive() {
 			for (int i = 0; i < enemylist->size(); i++) {
 				if (score->isGetScore(enemylist->givePos(i))) {
 					view->SetEffect(enemylist->givePos(i), 'E', 12);
+					gamedata->Enemy_getItem_count++;
 				}
 				if (enemylist->givePos(i) == ch) {
 					enemylist->toDead(i);
@@ -512,6 +557,253 @@ void Ability::Passive() {
 		case 34:
 			item->deleteItem();
 			break;
+		case 40:
+			item->deleteItem();
+			score->deleteScore();
+			knife = ch;
+			switch (gamedata->lastkey) {
+				case Up: knife.second--; break;
+				case Down: knife.second++; break;
+				case Left: knife.first--; break;
+				case Right: knife.first++; break;
+			}
+			if (knife.first < 0 || knife.first >= Width || knife.second < 0 || knife.second >= Height) {
+				break;
+			}
+			for (int i = 0; i < enemylist->size(); i++) {
+				if (enemylist->givePos(i) == knife) {
+					enemylist->toDead(i);
+				}
+			}
+			break;
+		case 41:
+			for (int i = 0; i < enemylist->size(); i++) {
+				if (score->isGetScore(enemylist->givePos(i))) {
+					gamedata->Score_count--;
+					view->SetEffect(enemylist->givePos(i), 'E', 12);
+				}
+				if (item->isGetItem(enemylist->givePos(i))) {
+					Count[41]++;
+					view->SetEffect(enemylist->givePos(i), 'E', 12);
+				}
+			}
+			while (gamedata->Item_count > 0 && Count[41] > 0) {
+				Count[41]--; gamedata->Item_count--;
+			}
+			while(Count[41] >= 2) {
+				Count[41] -= 2;
+				for (int i = 0; i < enemylist->size(); i++) {
+					enemylist->Move(i, ch);
+				}
+			}
+			for (int i = 0; i < 5; i++) {
+				for (std::pair<int, int> tmp : score->givePos()) {
+					enemylist->inputtarget(tmp);
+				}
+				for (std::pair<int, int> tmp : item->givePos()) {
+					enemylist->inputtarget(tmp);
+				}
+			}
+			break;
+		case 42:
+		{	
+			std::pair<int, int> pos, lastpos, tmp;
+			if (Count[42] == 0) Count[42] = 10;
+			else if (Count[42] > 0) {
+				Count[42]--;
+				if (Count[42] == 0) {
+					Count[42] = 10;
+					for (int i = 0; i < enemylist->size(); i++) {
+						pos = enemylist->givePos(i);
+						lastpos = enemylist->givelastPos(i);
+						if (pos == lastpos) continue;
+						if (pos.first == lastpos.first) {
+							if (pos.second < lastpos.second) {
+								tmp = { pos.first, pos.second - 1 };
+							}
+							else{
+								tmp = { pos.first, pos.second + 1 };
+							}
+						}
+						else {
+							if (pos.first < lastpos.first) {
+								tmp = { pos.first - 1, pos.second };
+							}
+							else {
+								tmp = { pos.first + 1, pos.second };
+							}
+						}
+						if (tmp == ch) {
+							character->toDead();
+						}
+						else if (tmp.first >= 0 && tmp.first < Width && tmp.second >= 0 && tmp.second < Height) {
+							enemyknife.push_back(tmp);
+						}
+					}
+				}
+			}
+			if (Effect[42] == 1) {
+				Effect[42] = 0;
+				knife = ch;
+				switch (gamedata->lastkey) {
+				case Up: knife.second--; break;
+				case Down: knife.second++; break;
+				case Left: knife.first--; break;
+				case Right: knife.first++; break;
+				}
+				if (knife.first < 0 || knife.first >= Width || knife.second < 0 || knife.second >= Height) {
+					break;
+				}
+				for (int i = 0; i < enemylist->size(); i++) {
+					if (enemylist->givePos(i) == knife) {
+						enemylist->toDead(i);
+					}
+				}
+				if (knife.first < 0 || knife.first >= Width || knife.second < 0 || knife.second >= Height) {
+					break;
+				}
+				if (mapdata->checknxtMap(knife) == 'E' || mapdata->checknxtMap(knife) == 'C')
+					break;
+				view->SetEffect(knife, '/', 4);
+			}
+
+			break;
+		}
+		case 43:
+			Count[43]++;
+			if (Count[43] < 1000) {
+				if (mapdata->checknxtMap(ch) == 'C') {
+					view->SetEffect(ch, '.', 7);
+				}
+				character->setPos({ Width / 2, Height / 2 });
+				character->setUnDead();
+			}
+			else {
+				item->deleteItem();
+				score->deleteScore();
+				gamedata->Score_count = gamedata->Item_count = 0;
+			}
+			break;
+		case 44:
+			if (gamedata->isGetItem) {
+				gamedata->Item_count = max(0, gamedata->Item_count - 2);
+			}
+			if (Count[44] == 0) Count[44] = 20;
+			else if (Count[44] > 0) {
+				Count[44]--;
+				if (Count[44] == 0) {
+					Count[44] = 20;
+					gamedata->Item_count++;
+					if (gamedata->Item_count == 5) {
+						gamedata->Item_count = 0;
+						character->toDead();
+					}
+				}
+			}
+			break;
+		case 45:
+			item->deleteItem();
+			if (Count[45] == 0) {
+				Count[45] = 50;
+				Effect[45] = 0;
+				gamedata->Item_count = 0;
+			}
+			else if (Count[45] > 0) {
+				Count[45]--;
+				gamedata->Item_count = (4-Count[45] / 10);
+				if (Count[45] == 0) {
+					Count[45] = 50;
+					Effect[45]++;
+					if (gamedata->Score_count < Effect[45] * 3) {
+						character->toDead();
+					}
+				}
+			}
+			break;
+		case 46:
+			if (gamedata->isGetItem) {
+				gamedata->Item_count = max(0, gamedata->Item_count - 2);
+			}
+			if(Count[46] == 0) Count[46] = 20;
+			else if (Count[46] > 0) {
+				Count[46]--;
+				if (Count[46] == 0) {
+					Count[46] = 20;
+					gamedata->Item_count = min(5, gamedata->Item_count + 1);
+				}
+			}
+			Sleep(200 * gamedata->Item_count);
+			break;
+		case 47:
+		{
+			if (Count[47] == 0) {
+				enemylist->clear();
+				for (int c = 0; c < Height; c += 4) {
+					enemylist->push_back({ 0, c }, std::rand() % 5, mapdata);
+					enemylist->push_back({ Width - 1, c }, std::rand() % 5, mapdata);
+				}
+			}
+			else if (Count[47] == 100) {
+				enemylist->clear();
+				for (int r = 2; r < Width; r += 5) {
+					for (int c = 2; c < Height; c += 5) {
+						enemylist->push_back({ r,c }, 4, mapdata);
+					}
+				}
+			}
+			else if (Count[47] == 200) {
+				enemylist->clear();
+			}
+			else if (Count[47] > 200 && Count[47] < 300) {
+				if (Count[47] % 5 == 0)
+					enemylist->push_back(mapdata->giveLegalPos({ 0,0,Width,Height }, ch), std::rand() % 5, mapdata);
+			}
+			else if (Count[47] == 300) {
+				enemylist->clear();
+			}
+			else if (Count[47] > 300) {
+				int dx[4] = { 0,0,1,-1 }, dy[4] = { 1,-1,0,0 };
+				for (int i = 0; i < 4; i++) {
+					if (ch.first + dx[i] < 0 || ch.first + dx[i] >= Width)
+						continue;
+					if (ch.second + dy[i] < 0 || ch.second + dy[i] >= Height)
+						continue;
+					enemylist->push_back({ ch.first + dx[i], ch.second + dy[i] }, 1, mapdata);
+				}
+				gamedata->Life_count = 1;
+				gamedata->Item_count = 0;
+				character->toDead();
+			}
+			if (gamedata->Item_count >= 3 && mapdata->isInDanger(ch)) {
+				gamedata->Item_count -= 3;
+				character->setUnDead();
+			}
+			Count[47]++;
+			break;
+		}
+		case 50:
+			if (gamedata->Round_count == 1) {
+				now = clock();
+				if (now - standard >= 1000*600) {
+					Effect[50] = 1;
+					SpecialItem = mapdata->giveLegalPos({ 0,0,Width,Height });
+				}
+			}
+			if (Effect[50] == 1) {
+				item->deleteItem();
+				score->deleteScore();
+				character->setUnDead();
+				for (int i = 0; i < enemylist->size(); i++) {
+					enemylist->setParalyze(i, 5);
+				}
+				message->input("Game Clear");
+
+				if (ch == SpecialItem) {
+					SpecialItem = { -1, -1 };
+					gamedata->Score_count = 999;
+				}
+			}
+			break;
 	}
 	DrawEffect();
 }
@@ -636,11 +928,14 @@ void Ability::DrawEffect() {
 			}
 			break;
 		case 34:
+		{
 			for (std::pair<int, int> tmp : score->givePos()) {
 				view->SetEffect(tmp, 'S', 14);
 			}
 			for (int r = 0; r < Width; r++) {
 				for (int h = 0; h < Height; h++) {
+					if (mapdata->checkObstacle({ r,h }))
+						continue;
 					view->SetClear({ r,h });
 					if ((ch.first - 3 <= r && r <= ch.first + 3) && (ch.second - 3 <= h && h <= ch.second + 3)) {
 						continue;
@@ -649,5 +944,99 @@ void Ability::DrawEffect() {
 				}
 			}
 			break;
+		}
+		case 40:
+		{
+			if (knife.first < 0 || knife.first >= Width || knife.second < 0 || knife.second >= Height) {
+				break;
+			}
+			if (mapdata->checknxtMap(knife) == 'E' || mapdata->checknxtMap(knife) == 'C')
+				break;
+			view->SetEffect(knife, '/', 4);
+			break;
+		}
+		case 42:
+			for (std::pair<int, int> tmp : enemyknife) {
+				view->SetEffect(tmp, '/', 4);
+			}
+			break;
+		case 43:
+			view->SetEffect(ch, 'C', 13);
+			break;
+		case 47:
+		{
+			if (Count[47] > 301) {
+				int dx[4] = { 0,0,1,-1 }, dy[4] = { 1,-1,0,0 };
+				std::pair<int, int> tmp;
+				view->SetQuickEffect(ch, 'C', 11);
+				for (int i = 0; i < 4; i++) {
+					tmp = { ch.first + dx[i], ch.second + dy[i]};
+					if (tmp.first < 0 || tmp.first >= Width || tmp.second < 0 || tmp.second >= Height)
+						continue;
+					view->SetQuickEffect(tmp, '.', 7);
+				}
+				for (int delta = 21; delta >= 1; delta--) {
+					for (int i = 0; i < 4; i++) {
+						tmp = { ch.first + dx[i] * delta, ch.second + dy[i] * delta };
+						if (tmp.first < 0 || tmp.first >= Width || tmp.second < 0 || tmp.second >= Height)
+							continue;
+						view->SetQuickEffect(tmp, 'E', 12);
+					}
+					Sleep(150);
+					for (int i = 0; i < 4; i++) {
+						tmp = { ch.first + dx[i] * delta, ch.second + dy[i] * delta };
+						if (tmp.first < 0 || tmp.first >= Width || tmp.second < 0 || tmp.second >= Height)
+							continue;
+						view->SetQuickEffect(tmp, '.', 7);
+					}
+				}
+			}
+			break;
+		}
+		case 50:
+		{
+			if (Effect[50] == 1 && gamedata->Round_count == 1) {
+				for (int i = 1; i <= 12; i++) {
+					for (int r = ch.first - i; r <= ch.first + i; r++) {
+						for (int c = ch.second - i; c <= ch.second + i; c++) {
+							if (r < 0 || r >= Width || c < 0 || c >= Height)
+								continue;
+							if (r != ch.first - i && r != ch.first + i && c != ch.second - i && c != ch.second + i)
+								continue;
+							view->SetQuickEffect({ r,c }, '.', 119);
+						}
+					}
+					view->SetQuickEffect(ch, 'C', 11);
+					Sleep(100);
+					for (int r = ch.first - i; r <= ch.first + i; r++) {
+						for (int c = ch.second - i; c <= ch.second + i; c++) {
+							if (r < 0 || r >= Width || c < 0 || c >= Height)
+								continue;
+							if (r != ch.first - i && r != ch.first + i && c != ch.second - i && c != ch.second + i)
+								continue;
+							view->SetQuickEffect({ r,c }, '.', 7);
+						}
+					}
+					std::pair<int, int> pos;
+					for (int s = 0; s < enemylist->size(); s++) {
+						pos = enemylist->givePos(s);
+						if (ch.first - i <= pos.first && pos.first <= ch.first + i &&
+							ch.second - i <= pos.second && pos.second <= ch.second + i) {
+							view->SetQuickEffect(pos, 'E', 8);
+						}
+					}
+				}
+			}
+			if (Effect[50] == 1) {
+				for (int i = 0; i < enemylist->size(); i++) {
+					view->SetEffect(enemylist->givePos(i), 'E', 8);
+				}
+				view->SetEffect(ch, 'C', 11);
+				if (SpecialItem.first != -1 && SpecialItem.second != -1) {
+					view->SetEffect(SpecialItem, 'S', 13);
+				}
+			}
+			break;
+		}
 	}
 }

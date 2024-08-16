@@ -15,6 +15,7 @@
 #include "EnumStatus.h"
 #include "StageModeData.h"
 #include "Message.h"
+#include "Achievement.h"
 
 
 class GameControl {
@@ -31,6 +32,7 @@ private:
 	StageModeData* stagemodedata;
 	DrawWindow* view;
 	Message* message;
+	Achievement* achievement;
 
 	int MapNo;
 	int AbilityNo;

@@ -40,6 +40,8 @@ std::pair<int, int> MapData::giveLegalPos(std::vector<int> border, std::pair<int
 			if ((x >= tmp.first - 4 && x <= tmp.first + 4) || (y >= tmp.second - 4 && y <= tmp.second + 4))
 				continue;
 		}
+		if (x < border[0] || y < border[1] || x >= border[2] || y >= border[3])
+			continue;
 		if (checknowMap({ x,y }) == 'S' || checknowMap({ x,y }) == 'I')
 			continue;
 		if (nxtMap[x][y] != '.')

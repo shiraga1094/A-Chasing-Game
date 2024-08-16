@@ -4,6 +4,7 @@
 #include <iostream>
 #include <deque>
 #include <vector>
+#include <time.h>
 
 #include "MapData.h"
 #include "GameData.h"
@@ -37,9 +38,16 @@ private:
 	std::pair<int, int> Cnt_31;
 	std::vector<std::string> str_32 = {
 		"不得和其他人站在同一列或行上",
-		"所有人座標各取XY平均值乘0.4上下取整，位置需在該行或列上",
+		"所有人座標各取XY平均值乘0.4上下取整，#位置需在該行或列上",
 		"半徑3格內需多於2人"
 	};
+	std::vector<std::string> str_47 = {
+		"Prelude", "Interlude", "Afterlude"
+	};
+	std::pair<int, int> knife = { 0,0 };
+	std::vector<std::pair<int, int>> enemyknife;
+	double standard, now;
+	std::pair<int, int> SpecialItem;
 
 public:
 	Ability(MapData* _mapdata, GameData* _gamedata, Character* _ch, 
