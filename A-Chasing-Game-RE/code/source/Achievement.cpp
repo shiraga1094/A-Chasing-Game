@@ -125,8 +125,12 @@ void Achievement::UnlockCheck(GameData* gamedata) {
 		for (int s = 0; s < 4; s++) {
 			if (data[testify[i]].Max_Score[s] >= 10)
 				tmp = true;
+			else
+				tmp = false;
 		}
-		if (tmp == false) break;
+		if (tmp == false) {
+			break;
+		}
 	}
 	if (tmp == true) {
 		data[47].isAchieve = true;
@@ -140,6 +144,9 @@ void Achievement::UnlockCheck(GameData* gamedata) {
 	for (int i = 0; i < 9; i++) {
 		if (data[test[i]].isAchieve) {
 			tmp = true;
+		}
+		else {
+			tmp = false;
 		}
 		if (tmp == false)
 			break;
