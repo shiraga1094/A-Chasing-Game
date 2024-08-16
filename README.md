@@ -10,7 +10,7 @@ A chasing game, or is the game chasing you?
 - 多樣化自訂功能
 
 ## Screenshot
-###Version 1.0
+### Version 1.0
 
 ### Version 1.1
 - 新增成就系統
