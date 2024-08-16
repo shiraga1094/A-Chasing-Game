@@ -10,7 +10,7 @@ class GameData {
 public:
 	GameData();
 	const int EnemyTypeLimit[4] = { 2,3,4,0 };
-	const int EnemyRandomLimit[4] = { 70,50,30,1 << 30 };
+	const int EnemyRandomLimit[4] = { 70,50,20,1 << 30 };
 	const int EnemyAmountLimit[4] = { 1,2,3,0 };
 	const int ItemRandomLimit[4] = { 10,15,20,20 };
 	const int ItemAmountLimit[4] = { 2,1,1,1 };
@@ -36,6 +36,7 @@ public:
 	bool isPerfect;
 
 	InputStatus lastkey;
+	int last_Kill_count;
 };
 
 

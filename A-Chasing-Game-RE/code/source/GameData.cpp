@@ -18,4 +18,5 @@ GameData::GameData() {
 	isPerfect = true;
 
 	lastkey = Space;
+	last_Kill_count = 0;
 }

@@ -163,10 +163,10 @@ void Achievement::CheckSpecialUnlock(GameData* gamedata) {
 			data[41].isAchieve = true;
 		}
 	}
-	if (gamedata->Round_count == 50 && gamedata->Kill_count >= 20) {
+	if (gamedata->Kill_count-gamedata->last_Kill_count>=20) {
 		data[42].isAchieve = true;
 	}
-	if (gamedata->Round_count == 500 && gamedata->isPerfect) {
+	if (gamedata->Round_count == 300 && gamedata->isPerfect) {
 		data[46].isAchieve = true;
 	}
 }

@@ -223,6 +223,7 @@ void GameControl::CheckScoreEvent() {
 	}
 }
 void GameControl::CheckEnemyDead() {
+	gamedata->last_Kill_count = gamedata->Kill_count;
 	for (int i = 0; i < enemylist->size(); i++) {
 		if (enemylist->checkisDead(i)) {
 			view->SetEffect(enemylist->givePos(i), 'E', 252);
